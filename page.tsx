@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -31,6 +32,9 @@ const TIMEZONES = [
 ];
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // ── SWR hooks ──────────────────────────────────────────────────────
   const { data: movies } = useSWR("/dashboard/api/movies", fetcher, { refreshInterval: 6 * 3600_000 });
   const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, { refreshInterval: 3600_000 });
@@ -50,7 +54,7 @@ export default function DashboardPage() {
       <header className="mb-10">
         <h1 className="text-3xl font-light tracking-tight font-mono">Dashboard</h1>
         <p className="text-neutral-500 text-sm mt-1 font-mono">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
         </p>
       </header>
 
@@ -284,12 +288,12 @@ export default function DashboardPage() {
               <div key={tz.label} className="flex justify-between items-baseline">
                 <span className="text-sm text-neutral-400">{tz.label}</span>
                 <span className="text-xl font-mono font-light">
-                  {new Intl.DateTimeFormat("en-US", {
+                  {mounted ? new Intl.DateTimeFormat("en-US", {
                     hour: "numeric",
                     minute: "2-digit",
                     timeZone: tz.tz,
                     hour12: true,
-                  }).format(new Date())}
+                  }).format(new Date()) : "--:--"}
                 </span>
               </div>
             ))}
