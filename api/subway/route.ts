@@ -40,6 +40,8 @@ const STOP_IDS: Record<string, string[]> = {
   M: ["D18N", "D18S"],
 };
 
+const ALERTS_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts";
+
 // Inline GTFS-RT proto definition (avoids shipping .proto files)
 const GTFS_RT_PROTO = `
 syntax = "proto2";
@@ -56,6 +58,7 @@ message FeedHeader {
 message FeedEntity {
   required string id = 1;
   optional TripUpdate trip_update = 3;
+  optional Alert alert = 5;
 }
 message TripUpdate {
   required TripDescriptor trip = 1;
@@ -72,6 +75,27 @@ message StopTimeEvent {
 message TripDescriptor {
   optional string trip_id = 1;
   optional string route_id = 5;
+}
+message Alert {
+  repeated TimeRange active_period = 1;
+  repeated EntitySelector informed_entity = 5;
+  optional TranslatedString header_text = 10;
+  optional TranslatedString description_text = 11;
+}
+message TimeRange {
+  optional uint64 start = 1;
+  optional uint64 end = 2;
+}
+message EntitySelector {
+  optional string route_id = 5;
+  optional string stop_id = 6;
+}
+message TranslatedString {
+  repeated Translation translation = 1;
+  message Translation {
+    required string text = 1;
+    optional string language = 2;
+  }
 }
 `;
 
@@ -162,10 +186,51 @@ export async function GET() {
       return true;
     });
 
+    // Fetch service alerts
+    const alerts: { lines: string[]; header: string; description: string }[] = [];
+    try {
+      const alertRes = await fetch(ALERTS_URL, { cache: "no-store" });
+      if (alertRes.ok) {
+        const alertBuf = await alertRes.arrayBuffer();
+        const alertFeed = FeedMessage.decode(new Uint8Array(alertBuf)) as unknown as {
+          entity: {
+            alert?: {
+              informedEntity: { routeId?: string; stopId?: string }[];
+              headerText?: { translation: { text: string; language?: string }[] };
+              descriptionText?: { translation: { text: string; language?: string }[] };
+            };
+          }[];
+        };
+
+        const lineSet = new Set(lines);
+        for (const entity of alertFeed.entity) {
+          const a = entity.alert;
+          if (!a?.informedEntity || !a.headerText?.translation?.length) continue;
+
+          const affectedLines = a.informedEntity
+            .map((e) => e.routeId)
+            .filter((r): r is string => r != null && lineSet.has(r));
+          if (affectedLines.length === 0) continue;
+
+          const header = a.headerText.translation.find((t) => t.language === "en")?.text
+            ?? a.headerText.translation[0]?.text ?? "";
+          const description = a.descriptionText?.translation?.find((t) => t.language === "en")?.text
+            ?? a.descriptionText?.translation?.[0]?.text ?? "";
+
+          if (header) {
+            alerts.push({ lines: [...new Set(affectedLines)], header, description });
+          }
+        }
+      }
+    } catch (alertErr) {
+      console.error("Subway alerts fetch error:", alertErr);
+    }
+
     return NextResponse.json({
       station: config.subwayStation,
       lines,
       arrivals: deduped,
+      alerts,
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {

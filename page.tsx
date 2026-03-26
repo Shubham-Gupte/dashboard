@@ -202,6 +202,23 @@ export default function DashboardPage() {
               ) : (
                 <p className="text-xs text-[#AE6455] font-mono">{subway.message ?? "No arrivals"}</p>
               )}
+              {subway.alerts?.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-[#AE645533] space-y-2">
+                  {subway.alerts.map((a: { lines: string[]; header: string; description: string }, i: number) => (
+                    <div key={i} className="flex gap-2 text-xs">
+                      <span className="text-[#FCCC0A] flex-shrink-0">&#9888;</span>
+                      <div>
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {a.lines.map((l: string) => (
+                            <SubwayIcon key={l} line={l} size={14} />
+                          ))}
+                        </div>
+                        <span className="text-[#EF9870]">{a.header}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <div className="text-[#AE6455] text-sm">Loading...</div>
