@@ -1,0 +1,12 @@
+{
+  "address": "350 W 72nd St, New York, NY 10023",
+  "subwayLines": ["1", "2", "3"],
+  "subwayStation": "72nd St - Broadway",
+  "letterboxd": "shubert",
+  "goodreads": "32783670-shubham-gupte",
+  "timezones": [
+    { "label": "NYC", "tz": "America/New_York" },
+    { "label": "UTC", "tz": "UTC" },
+    { "label": "SF", "tz": "America/Los_Angeles" }
+  ]
+}
