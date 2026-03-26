@@ -1,0 +1,12 @@
+{
+  "address": "241 W 24th St, New York, NY 10011",
+  "subwayLines": ["C", "E", "1", "F", "M"],
+  "subwayStation": "23 St",
+  "letterboxd": "shubert",
+  "goodreads": "32783670-shubham-gupte",
+  "timezones": [
+    { "label": "NYC", "tz": "America/New_York" },
+    { "label": "UTC", "tz": "UTC" },
+    { "label": "SF", "tz": "America/Los_Angeles" }
+  ]
+}

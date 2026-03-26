@@ -1,5 +1,4 @@
-import { readFileSync } from "fs";
-import { join } from "path";
+import configData from "./config.json";
 
 export interface DashboardConfig {
   address: string;
@@ -10,12 +9,6 @@ export interface DashboardConfig {
   timezones: { label: string; tz: string }[];
 }
 
-let cachedConfig: DashboardConfig | null = null;
-
 export function getConfig(): DashboardConfig {
-  if (cachedConfig) return cachedConfig;
-  const root = process.env.DASHBOARD_ROOT ?? join(process.cwd(), "lib", "dashboard");
-  const raw = readFileSync(join(root, "config.json"), "utf-8");
-  cachedConfig = JSON.parse(raw) as DashboardConfig;
-  return cachedConfig;
+  return configData as DashboardConfig;
 }
