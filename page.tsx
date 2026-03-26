@@ -3,6 +3,30 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 
+const MTA_COLORS: Record<string, string> = {
+  "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
+  "4": "#00933C", "5": "#00933C", "6": "#00933C",
+  "7": "#B933AD",
+  A: "#0039A6", C: "#0039A6", E: "#0039A6",
+  B: "#FF6319", D: "#FF6319", F: "#FF6319", M: "#FF6319",
+  N: "#FCCC0A", Q: "#FCCC0A", R: "#FCCC0A", W: "#FCCC0A",
+  G: "#6CBE45", L: "#A7A9AC",
+  J: "#996633", Z: "#996633",
+};
+
+function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
+  const bg = MTA_COLORS[line] ?? "#555";
+  const isYellow = ["N", "Q", "R", "W"].includes(line);
+  return (
+    <span
+      style={{ width: size, height: size, backgroundColor: bg, fontSize: size * 0.55 }}
+      className={`inline-flex items-center justify-center rounded-full font-bold leading-none ${isYellow ? "text-black" : "text-white"}`}
+    >
+      {line}
+    </span>
+  );
+}
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function timeAgo(iso: string | undefined): string {
@@ -49,38 +73,55 @@ export default function DashboardPage() {
   const now = new Date().toISOString();
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-6 md:p-10">
+    <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10">
       {/* Header */}
-      <header className="mb-10">
-        <h1 className="text-3xl font-light tracking-tight font-mono">Dashboard</h1>
-        <p className="text-neutral-500 text-sm mt-1 font-mono">
-          {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
-        </p>
+      <header className="mb-10 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-light tracking-tight font-mono text-[#F4C9AC]">Dashboard</h1>
+          <p className="text-[#AE6455] text-sm mt-1 font-mono">
+            {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
+          </p>
+        </div>
+        <div className="flex gap-6 items-baseline font-mono">
+          {TIMEZONES.map((tz) => (
+            <div key={tz.label} className="text-right">
+              <div className="text-[10px] uppercase tracking-widest text-[#AE6455]">{tz.label}</div>
+              <div className="text-lg font-light text-[#F4C9AC]">
+                {mounted ? new Intl.DateTimeFormat("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  timeZone: tz.tz,
+                  hour12: true,
+                }).format(new Date()) : "--:--"}
+              </div>
+            </div>
+          ))}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* ── Weather ────────────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Weather</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(weather?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Weather</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
           </div>
           {weather?.current ? (
             <>
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-5xl font-light font-mono">{weather.current.temp}°</span>
-                <span className="text-neutral-400 text-sm">{weather.current.condition}</span>
+                <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
+                <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
               </div>
-              <div className="text-xs text-neutral-500 space-x-4">
+              <div className="text-xs text-[#AE6455] space-x-4">
                 <span>Feels {weather.current.feelsLike}°</span>
                 <span>Wind {weather.current.windSpeed} mph</span>
                 <span>{weather.current.humidity}% humidity</span>
               </div>
               {weather.forecast && (
-                <div className="flex gap-4 mt-4 pt-4 border-t border-neutral-800">
+                <div className="flex gap-4 mt-4 pt-4 border-t border-[#AE645533]">
                   {weather.forecast.map((d: { high: number; low: number; condition: string }, i: number) => (
-                    <div key={i} className="text-xs text-neutral-400">
-                      <div className="text-neutral-300 font-mono">{d.high}° / {d.low}°</div>
+                    <div key={i} className="text-xs text-[#EF9870]">
+                      <div className="text-[#F4C9AC] font-mono">{d.high}° / {d.low}°</div>
                       <div>{d.condition}</div>
                     </div>
                   ))}
@@ -88,87 +129,90 @@ export default function DashboardPage() {
               )}
             </>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Calendar ───────────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Today</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(calendar?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Today</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
           </div>
           {calendar?.events ? (
             calendar.events.length > 0 ? (
               <ul className="space-y-3">
                 {calendar.events.map((e: { summary: string; start: string; end: string; location?: string }, i: number) => (
-                  <li key={i} className="border-l-2 border-neutral-700 pl-3">
-                    <div className="text-sm font-medium">{e.summary}</div>
-                    <div className="text-xs text-neutral-500">
+                  <li key={i} className="border-l-2 border-[#AE6455] pl-3">
+                    <div className="text-sm font-medium text-[#F4C9AC]">{e.summary}</div>
+                    <div className="text-xs text-[#AE6455]">
                       {e.start.includes("T") ? `${formatTime(e.start, "America/New_York")} – ${formatTime(e.end, "America/New_York")}` : "All day"}
                     </div>
-                    {e.location && <div className="text-xs text-neutral-600">{e.location}</div>}
+                    {e.location && <div className="text-xs text-[#AE645599]">{e.location}</div>}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-neutral-600 text-sm">No events today</p>
+              <p className="text-[#AE6455] text-sm">No events today</p>
             )
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Subway ─────────────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Subway</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(subway?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Subway</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(subway?.updatedAt)}</span>
           </div>
           {subway ? (
             <>
-              <div className="text-sm text-neutral-300 mb-2">{subway.station}</div>
-              <div className="flex gap-2 mb-3">
-                {subway.lines?.map((l: string) => {
-                  const bg: Record<string, string> = {
-                    "1": "bg-[#EE352E]", "2": "bg-[#EE352E]", "3": "bg-[#EE352E]",
-                    "4": "bg-[#00933C]", "5": "bg-[#00933C]", "6": "bg-[#00933C]",
-                    "7": "bg-[#B933AD]",
-                    A: "bg-[#0039A6]", C: "bg-[#0039A6]", E: "bg-[#0039A6]",
-                    B: "bg-[#FF6319]", D: "bg-[#FF6319]", F: "bg-[#FF6319]", M: "bg-[#FF6319]",
-                    N: "bg-[#FCCC0A] text-black", Q: "bg-[#FCCC0A] text-black", R: "bg-[#FCCC0A] text-black", W: "bg-[#FCCC0A] text-black",
-                    G: "bg-[#6CBE45]", L: "bg-[#A7A9AC]",
-                    J: "bg-[#996633]", Z: "bg-[#996633]",
-                  };
-                  return (
-                    <span key={l} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono ${bg[l] ?? "bg-neutral-700"}`}>
-                      {l}
-                    </span>
-                  );
-                })}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg font-mono font-light text-[#F4C9AC]">{subway.station}</span>
+                <div className="flex gap-1 ml-auto">
+                  {subway.lines?.map((l: string) => (
+                    <SubwayIcon key={l} line={l} size={20} />
+                  ))}
+                </div>
               </div>
               {subway.arrivals?.length > 0 ? (
-                <ul className="space-y-1">
-                  {subway.arrivals.map((a: { line: string; minutes: number; direction: string }, i: number) => (
-                    <li key={i} className="text-sm text-neutral-400 font-mono">
-                      <span className="text-neutral-200 font-bold">{a.line}</span> · {a.minutes} min · {a.direction}
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid grid-cols-2 gap-px bg-[#AE645533]">
+                  {["Uptown", "Downtown"].map((dir) => {
+                    const trains = subway.arrivals.filter((a: { direction: string }) => a.direction === dir);
+                    return (
+                      <div key={dir} className="bg-[#2A1F1B] p-3">
+                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] mb-3">{dir === "Downtown" ? "↓ Downtown" : "↑ Uptown"}</div>
+                        <div className="space-y-2">
+                          {trains.length > 0 ? trains.map((a: { line: string; minutes: number; direction: string }, i: number) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <SubwayIcon line={a.line} size={18} />
+                              <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold" : "text-[#EF9870]"}`}>
+                                {a.minutes === 0 ? "NOW" : a.minutes}
+                              </span>
+                            </div>
+                          )) : (
+                            <div className="text-xs text-[#AE645566] font-mono">—</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <p className="text-xs text-neutral-600">{subway.message ?? "No arrivals"}</p>
+                <p className="text-xs text-[#AE6455] font-mono">{subway.message ?? "No arrivals"}</p>
               )}
             </>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Movies in Theaters ──────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800 md:col-span-2 lg:col-span-1">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">In Theaters</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(movies?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">In Theaters</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
           {movies?.movies ? (
             <ul className="space-y-3">
@@ -178,150 +222,127 @@ export default function DashboardPage() {
                     <img src={m.poster} alt="" className="w-8 h-12 rounded object-cover flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate">{m.title}</div>
+                    <div className="text-sm truncate text-[#F4C9AC]">{m.title}</div>
                     <div className="flex items-center gap-2 mt-1">
-                      <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
+                      <div className="flex-1 h-1.5 bg-[#1A1210] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#EF9870] rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
                       </div>
-                      <span className="text-xs text-neutral-500 font-mono">{m.rating.toFixed(1)}</span>
+                      <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
                     </div>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Letterboxd Watchlist ────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Watchlist</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(watchlist?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watchlist</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(watchlist?.updatedAt)}</span>
           </div>
           {watchlist?.watchlist ? (
             <ul className="space-y-2">
               {watchlist.watchlist.map((w: { title: string; year: string; link: string }, i: number) => (
                 <li key={i} className="text-sm">
-                  <span className="text-neutral-200">{w.title}</span>
-                  <span className="text-neutral-600 ml-1">({w.year})</span>
+                  <span className="text-[#F4C9AC]">{w.title}</span>
+                  <span className="text-[#AE6455] ml-1">({w.year})</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Minutes Watched ────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Watched This Year</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(diary?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watched This Year</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(diary?.updatedAt)}</span>
           </div>
           {diary ? (
             <>
               <div className="flex items-baseline gap-4 mb-3">
                 <div>
-                  <span className="text-4xl font-light font-mono">{diary.filmCount ?? 0}</span>
-                  <span className="text-neutral-500 text-sm ml-1">films</span>
+                  <span className="text-4xl font-light font-mono text-[#F4C9AC]">{diary.filmCount ?? 0}</span>
+                  <span className="text-[#AE6455] text-sm ml-1">films</span>
                 </div>
                 <div>
-                  <span className="text-4xl font-light font-mono">{diary.totalMinutes ? Math.round(diary.totalMinutes / 60) : 0}</span>
-                  <span className="text-neutral-500 text-sm ml-1">hours</span>
+                  <span className="text-4xl font-light font-mono text-[#F4C9AC]">{diary.totalMinutes ? Math.round(diary.totalMinutes / 60) : 0}</span>
+                  <span className="text-[#AE6455] text-sm ml-1">hours</span>
                 </div>
               </div>
               {diary.diary?.slice(0, 5).map((d: { title: string; watchedDate: string; rating: number | null; runtime: number }, i: number) => (
-                <div key={i} className="text-xs text-neutral-500 flex justify-between py-0.5">
-                  <span className="text-neutral-400 truncate mr-2">{d.title}</span>
-                  <span className="flex-shrink-0">{d.rating ? `${"★".repeat(Math.round(d.rating))}` : "—"}</span>
+                <div key={i} className="text-xs text-[#AE6455] flex justify-between py-0.5">
+                  <span className="text-[#EF9870] truncate mr-2">{d.title}</span>
+                  <span className="flex-shrink-0 text-[#F4C9AC]">{d.rating ? `${"★".repeat(Math.round(d.rating))}` : "—"}</span>
                 </div>
               ))}
             </>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── Books Read This Year ───────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Books Read</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(booksRead?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Read in '26</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {booksRead ? (
             <>
-              <div className="text-4xl font-light font-mono mb-3">{booksRead.count ?? 0}</div>
+              <div className="text-4xl font-light font-mono mb-3 text-[#F4C9AC]">{booksRead.count ?? 0}</div>
               <ul className="space-y-2">
                 {booksRead.books?.slice(0, 5).map((b: { title: string; author: string; rating: number | null; pages: number | null }, i: number) => (
                   <li key={i} className="text-sm">
-                    <div className="text-neutral-300 truncate">{b.title}</div>
-                    <div className="text-xs text-neutral-600">{b.author} {b.rating ? `· ${b.rating}/5` : ""}</div>
+                    <div className="text-[#F4C9AC] truncate">{b.title}</div>
+                    <div className="text-xs text-[#AE6455]">{b.author} {b.rating ? `· ${b.rating}/5` : ""}</div>
                   </li>
                 ))}
               </ul>
             </>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
         {/* ── To-Read / Recs ─────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">To Read</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(booksToRead?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To Read</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(booksToRead?.updatedAt)}</span>
           </div>
           {booksToRead?.books ? (
             <ul className="space-y-2">
-              {booksToRead.books.map((b: { title: string; author: string; avgRating: number; pages: number | null }, i: number) => (
+              {booksToRead.books.slice(0, 5).map((b: { title: string; author: string; avgRating: number; pages: number | null }, i: number) => (
                 <li key={i} className="text-sm">
-                  <div className="text-neutral-300 truncate">{b.title}</div>
-                  <div className="text-xs text-neutral-600">
+                  <div className="text-[#F4C9AC] truncate">{b.title}</div>
+                  <div className="text-xs text-[#AE6455]">
                     {b.author} · {b.avgRating.toFixed(1)} avg {b.pages ? `· ${b.pages}p` : ""}
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
 
-        {/* ── Time Elsewhere ─────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">World Clock</h2>
-            <span className="text-xs text-neutral-600">live</span>
-          </div>
-          <div className="space-y-3">
-            {TIMEZONES.map((tz) => (
-              <div key={tz.label} className="flex justify-between items-baseline">
-                <span className="text-sm text-neutral-400">{tz.label}</span>
-                <span className="text-xl font-mono font-light">
-                  {mounted ? new Intl.DateTimeFormat("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    timeZone: tz.tz,
-                    hour12: true,
-                  }).format(new Date()) : "--:--"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* ── Fun Fact ───────────────────────────────────────────────── */}
-        <section className="bg-neutral-900 rounded-xl p-6 border border-neutral-800 md:col-span-2 lg:col-span-1">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-neutral-400">Fun Fact</h2>
-            <span className="text-xs text-neutral-600">{timeAgo(funFact?.updatedAt)}</span>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Fun Fact</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(funFact?.updatedAt)}</span>
           </div>
           {funFact?.fact ? (
-            <p className="text-sm text-neutral-300 leading-relaxed">{funFact.fact}</p>
+            <p className="text-sm text-[#F4C9AC] leading-relaxed">{funFact.fact}</p>
           ) : (
-            <div className="text-neutral-600 text-sm">Loading...</div>
+            <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
         </section>
       </div>

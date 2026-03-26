@@ -152,13 +152,20 @@ export async function GET() {
       }
     }
 
-    // Sort by arrival time, cap at 10
+    // Sort by arrival time, then keep only the next train per line+direction
     arrivals.sort((a, b) => a.minutes - b.minutes);
+    const seen = new Set<string>();
+    const deduped = arrivals.filter((a) => {
+      const key = `${a.line}-${a.direction}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     return NextResponse.json({
       station: config.subwayStation,
       lines,
-      arrivals: arrivals.slice(0, 10),
+      arrivals: deduped,
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
