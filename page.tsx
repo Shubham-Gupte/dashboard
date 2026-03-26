@@ -129,11 +129,23 @@ export default function DashboardPage() {
             <>
               <div className="text-sm text-neutral-300 mb-2">{subway.station}</div>
               <div className="flex gap-2 mb-3">
-                {subway.lines?.map((l: string) => (
-                  <span key={l} className="w-7 h-7 rounded-full bg-red-700 flex items-center justify-center text-xs font-bold font-mono">
-                    {l}
-                  </span>
-                ))}
+                {subway.lines?.map((l: string) => {
+                  const bg: Record<string, string> = {
+                    "1": "bg-[#EE352E]", "2": "bg-[#EE352E]", "3": "bg-[#EE352E]",
+                    "4": "bg-[#00933C]", "5": "bg-[#00933C]", "6": "bg-[#00933C]",
+                    "7": "bg-[#B933AD]",
+                    A: "bg-[#0039A6]", C: "bg-[#0039A6]", E: "bg-[#0039A6]",
+                    B: "bg-[#FF6319]", D: "bg-[#FF6319]", F: "bg-[#FF6319]", M: "bg-[#FF6319]",
+                    N: "bg-[#FCCC0A] text-black", Q: "bg-[#FCCC0A] text-black", R: "bg-[#FCCC0A] text-black", W: "bg-[#FCCC0A] text-black",
+                    G: "bg-[#6CBE45]", L: "bg-[#A7A9AC]",
+                    J: "bg-[#996633]", Z: "bg-[#996633]",
+                  };
+                  return (
+                    <span key={l} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono ${bg[l] ?? "bg-neutral-700"}`}>
+                      {l}
+                    </span>
+                  );
+                })}
               </div>
               {subway.arrivals?.length > 0 ? (
                 <ul className="space-y-1">
