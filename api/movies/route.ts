@@ -12,6 +12,7 @@ interface TmdbMovie {
   vote_average: number;
   vote_count: number;
   poster_path: string | null;
+  release_date?: string;
 }
 
 interface TmdbListResponse {
@@ -27,10 +28,10 @@ const parser = new XMLParser({
   attributeNamePrefix: "@_",
 });
 
-async function getWatchedTmdbIds(letterboxdUser: string): Promise<Set<number>> {
+async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
   const ids = new Set<number>();
   try {
-    const res = await fetch(`https://letterboxd.com/${letterboxdUser}/rss/`, {
+    const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" },
       next: { revalidate: 3600 },
     });
@@ -43,7 +44,7 @@ async function getWatchedTmdbIds(letterboxdUser: string): Promise<Set<number>> {
       if (tmdbId) ids.add(tmdbId);
     }
   } catch {
-    // non-fatal — just skip filtering
+    // non-fatal
   }
   return ids;
 }
@@ -56,32 +57,53 @@ export async function GET() {
   try {
     const config = getConfig();
 
-    // Fetch in parallel: now playing, streaming trending, and watched list
-    const [nowPlaying, streaming, watchedIds] = await Promise.all([
+    const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+
+    // Fetch in parallel: now playing, streaming, watched, and watchlist
+    const [nowPlaying, streaming, watchedIds, watchlistIds] = await Promise.all([
       tmdbFetch<TmdbListResponse>("/movie/now_playing", { region: "US" }),
       tmdbFetch<TmdbListResponse>("/discover/movie", {
         watch_region: "US",
         with_watch_providers: PROVIDER_IDS,
         sort_by: "popularity.desc",
+        "release_date.gte": cutoff,
       }),
-      getWatchedTmdbIds(config.letterboxd),
+      fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/rss/`),
+      fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/watchlist/rss/`),
     ]);
 
-    // Merge and dedupe
+    // Merge, dedupe, and filter to last 90 days
     const seen = new Set<number>();
     const all: (TmdbMovie & { source: string })[] = [];
+    const isRecent = (m: TmdbMovie) => !m.release_date || m.release_date >= cutoff;
     for (const m of nowPlaying.results) {
-      if (!seen.has(m.id)) { seen.add(m.id); all.push({ ...m, source: "theater" }); }
+      if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "theater" }); }
     }
     for (const m of streaming.results) {
       if (!seen.has(m.id)) { seen.add(m.id); all.push({ ...m, source: "streaming" }); }
     }
 
-    const scored = all
+    const unwatched = all
       .filter((m) => !watchedIds.has(m.id))
-      .map((m) => ({ ...m, _score: score(m) }))
-      .sort((a, b) => b._score - a._score)
-      .slice(0, 8);
+      .map((m) => ({ ...m, _score: score(m), fromWatchlist: watchlistIds.has(m.id) }))
+      .sort((a, b) => b._score - a._score);
+
+    // Guarantee: 2 theater, 1 watchlist (if available on streaming), fill rest
+    const reserved = new Set<number>();
+    const picks: typeof unwatched = [];
+
+    const theaters = unwatched.filter((m) => m.source === "theater");
+    for (const m of theaters.slice(0, 2)) { picks.push(m); reserved.add(m.id); }
+
+    const watchlistPick = unwatched.find((m) => m.fromWatchlist && !reserved.has(m.id));
+    if (watchlistPick) { picks.push({ ...watchlistPick, source: "watchlist" }); reserved.add(watchlistPick.id); }
+
+    for (const m of unwatched) {
+      if (picks.length >= 5) break;
+      if (!reserved.has(m.id)) { picks.push(m); reserved.add(m.id); }
+    }
+
+    const scored = picks.sort((a, b) => b._score - a._score);
 
     const maxScore = scored[0]?._score ?? 1;
     const movies = scored.map((m) => ({

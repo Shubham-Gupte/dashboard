@@ -315,15 +315,15 @@ export default function DashboardPage() {
         {/* ── Movies in Theaters ──────────────────────────────────────── */}
         <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Trending</h2>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">What to Watch</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
           {movies?.movies ? (
             <ul className="space-y-3">
-              {movies.movies.map((m: { id: number; title: string; rating: number; heat: number; poster: string | null }) => (
+              {movies.movies.map((m: { id: number; title: string; rating: number; heat: number; poster: string | null; source: string }) => (
                 <li key={m.id} className="flex items-center gap-3">
                   {m.poster && (
-                    <img src={m.poster} alt="" className="w-8 h-12 rounded object-cover flex-shrink-0" />
+                    <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${m.source === "theater" ? "ring-2 ring-[#EE352E]" : ""}`} />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate text-[#F4C9AC]">{m.title}</div>
