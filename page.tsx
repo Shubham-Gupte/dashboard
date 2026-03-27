@@ -374,7 +374,7 @@ export default function DashboardPage() {
         {/* ── Movies in Theaters ──────────────────────────────────────── */}
         <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">What to Watch</h2>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Now Showing</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
           {movies?.movies ? (
