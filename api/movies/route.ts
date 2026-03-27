@@ -13,7 +13,15 @@ interface TmdbMovie {
   vote_count: number;
   poster_path: string | null;
   release_date?: string;
+  genre_ids?: number[];
 }
+
+const GENRE_MAP: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+  99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+  27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
+  10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+};
 
 interface TmdbListResponse {
   results: TmdbMovie[];
@@ -110,6 +118,7 @@ export async function GET() {
     const movies = scored.map((m) => ({
       id: m.id,
       title: m.title,
+      genre: m.genre_ids?.map((id) => GENRE_MAP[id]).filter(Boolean)[0] ?? null,
       rating: Math.round(m.vote_average * 10) / 10,
       heat: m._score / maxScore,
       poster: m.poster_path ? `https://image.tmdb.org/t/p/w154${m.poster_path}` : null,

@@ -379,7 +379,7 @@ export default function DashboardPage() {
           </div>
           {movies?.movies ? (
             <ul className="space-y-3">
-              {movies.movies.map((m: { id: number; title: string; rating: number; heat: number; poster: string | null; source: string }) => (
+              {movies.movies.map((m: { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string }) => (
                 <li key={m.id} className="flex items-center gap-3">
                   {m.poster && (
                     <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
@@ -387,7 +387,7 @@ export default function DashboardPage() {
                     }`} />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate text-[#F4C9AC]">{m.title}</div>
+                    <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex-1 h-1.5 bg-[#1A1210] rounded-full overflow-hidden">
                         <div className="h-full bg-[#EF9870] rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
