@@ -227,19 +227,88 @@ export default function DashboardPage() {
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
           </div>
           {calendar?.events ? (
-            calendar.events.length > 0 ? (
-              <ul className="space-y-3">
-                {calendar.events.map((e: { summary: string; start: string; end: string; location?: string }, i: number) => (
-                  <li key={i} className="border-l-2 border-[#AE6455] pl-3">
-                    <div className="text-sm font-medium text-[#F4C9AC]">{e.summary}</div>
-                    <div className="text-xs text-[#AE6455]">
-                      {e.start.includes("T") ? `${formatTime(e.start, "America/New_York")} – ${formatTime(e.end, "America/New_York")}` : "All day"}
+            calendar.events.length > 0 ? (() => {
+              const events = calendar.events as { summary: string; start: string; end: string; location?: string }[];
+              const timed = events.filter((e) => e.start.includes("T"));
+              const allDay = events.filter((e) => !e.start.includes("T"));
+
+              // Determine timeline range from events
+              const hours = timed.map((e) => {
+                const s = new Date(e.start).getHours();
+                const eH = new Date(e.end).getHours();
+                const eM = new Date(e.end).getMinutes();
+                return { s, e: eM > 0 ? eH + 1 : eH };
+              });
+              const startHour = Math.min(...hours.map((h) => h.s));
+              const endHour = Math.max(...hours.map((h) => h.e));
+              const totalSlots = endHour - startHour;
+
+              // Find current hour for "now" marker
+              const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
+              const nowInRange = nowHour >= startHour && nowHour <= endHour;
+
+              // Build free/busy blocks
+              const slots: { hour: number; events: typeof timed }[] = [];
+              for (let h = startHour; h < endHour; h++) {
+                const eventsInSlot = timed.filter((e) => {
+                  const eStart = new Date(e.start).getHours() + new Date(e.start).getMinutes() / 60;
+                  const eEnd = new Date(e.end).getHours() + new Date(e.end).getMinutes() / 60;
+                  return eStart < h + 1 && eEnd > h;
+                });
+                slots.push({ hour: h, events: eventsInSlot });
+              }
+
+              return (
+                <>
+                  {allDay.length > 0 && (
+                    <div className="mb-3 space-y-1">
+                      {allDay.map((e, i) => (
+                        <div key={i} className="text-xs bg-[#AE645533] rounded px-2 py-1 text-[#EF9870]">{e.summary}</div>
+                      ))}
                     </div>
-                    {e.location && <div className="text-xs text-[#AE645599]">{e.location}</div>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
+                  )}
+                  <div className="relative">
+                    {slots.map(({ hour, events: slotEvents }) => {
+                      const isFree = slotEvents.length === 0;
+                      const isPast = mounted && nowHour > hour + 1;
+                      const label = hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour - 12}p`;
+                      // Show the event name only on the first slot it appears in
+                      const primaryEvent = slotEvents[0];
+                      const isEventStart = primaryEvent && new Date(primaryEvent.start).getHours() === hour;
+
+                      return (
+                        <div key={hour} className={`flex items-stretch ${isPast ? "opacity-40" : ""}`}>
+                          <div className="w-8 text-[10px] font-mono text-[#AE6455] flex-shrink-0 pt-0.5 text-right pr-2">{label}</div>
+                          <div className={`flex-1 border-l-2 min-h-[28px] pl-2 flex items-center ${
+                            isFree ? "border-[#AE645522]" : "border-[#EF9870]"
+                          }`}>
+                            {isFree ? (
+                              <span className="text-[10px] text-[#AE645544] font-mono italic">free</span>
+                            ) : isEventStart && primaryEvent ? (
+                              <div className="py-0.5">
+                                <div className="text-xs text-[#F4C9AC] leading-tight">{primaryEvent.summary}</div>
+                                <div className="text-[10px] text-[#AE6455]">
+                                  {formatTime(primaryEvent.start, "America/New_York")} – {formatTime(primaryEvent.end, "America/New_York")}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Now indicator */}
+                    {mounted && nowInRange && (
+                      <div
+                        className="absolute left-8 right-0 h-0.5 bg-[#FCCC0A] z-10 pointer-events-none"
+                        style={{ top: `${((nowHour - startHour) / totalSlots) * 100}%` }}
+                      >
+                        <div className="absolute -left-1 -top-[3px] w-2 h-2 rounded-full bg-[#FCCC0A]" />
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })() : (
               <p className="text-[#AE6455] text-sm">No events today</p>
             )
           ) : (
