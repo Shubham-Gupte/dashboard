@@ -67,15 +67,16 @@ export async function GET() {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error("Failed to get access token");
 
-    // Fetch today's events
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Fetch today's events in Eastern time
+    const tz = "America/New_York";
+    const nowET = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
+    const todayStart = `${nowET}T00:00:00`;
+    const todayEnd = `${nowET}T23:59:59`;
 
     const eventsUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
-    eventsUrl.searchParams.set("timeMin", todayStart.toISOString());
-    eventsUrl.searchParams.set("timeMax", todayEnd.toISOString());
+    eventsUrl.searchParams.set("timeMin", todayStart);
+    eventsUrl.searchParams.set("timeMax", todayEnd);
+    eventsUrl.searchParams.set("timeZone", tz);
     eventsUrl.searchParams.set("singleEvents", "true");
     eventsUrl.searchParams.set("orderBy", "startTime");
 
