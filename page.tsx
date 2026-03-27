@@ -229,9 +229,15 @@ export default function DashboardPage() {
           {calendar?.events ? (
             calendar.events.length > 0 ? (() => {
               const events = calendar.events as { summary: string; start: string; end: string; location?: string }[];
-              const timed = events.filter((e) => e.start.includes("T")).sort((a, b) => a.start.localeCompare(b.start));
+              const allTimed = events.filter((e) => e.start.includes("T")).sort((a, b) => a.start.localeCompare(b.start));
               const allDay = events.filter((e) => !e.start.includes("T"));
               const nowMs = Date.now();
+              const oneHourAgo = nowMs - 3600000;
+
+              // Keep: events ending after 1 hour ago (shows last completed + all upcoming)
+              const timed = mounted
+                ? allTimed.filter((e) => new Date(e.end).getTime() > oneHourAgo)
+                : allTimed;
 
               // Build rows: event rows with free gaps between them
               const rows: { type: "event" | "free"; summary?: string; start?: string; end?: string; location?: string; duration?: number }[] = [];
