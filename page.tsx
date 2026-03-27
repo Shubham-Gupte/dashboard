@@ -14,6 +14,73 @@ const MTA_COLORS: Record<string, string> = {
   J: "#996633", Z: "#996633",
 };
 
+type MovieItem = { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string };
+
+const ITEM_H = 56;
+const VISIBLE = 5;
+
+function CreditsCycle({ movies }: { movies: MovieItem[] }) {
+  const [px, setPx] = useState(0);
+  const count = movies.length;
+  const totalH = count * ITEM_H;
+
+  useEffect(() => {
+    if (count <= VISIBLE) return;
+    let raf: number;
+    let last: number | null = null;
+    const speed = 0.02; // px per ms (~20px/s)
+    const tick = (ts: number) => {
+      if (last !== null) setPx((p) => (p + speed * (ts - last!)) % totalH);
+      last = ts;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [count, totalH]);
+
+  if (count <= VISIBLE) {
+    return (
+      <div className="space-y-1">
+        {movies.map((m) => <MovieRow key={m.id} movie={m} />)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative overflow-hidden" style={{ height: VISIBLE * ITEM_H }}>
+      <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#2A1F1B] to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2A1F1B] to-transparent z-10 pointer-events-none" />
+      <div style={{ transform: `translateY(${-px}px)` }}>
+        {/* Triple for seamless wrap */}
+        {[0, 1, 2].map((batch) =>
+          movies.map((m, i) => <MovieRow key={`${batch}-${m.id}-${i}`} movie={m} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MovieRow({ movie: m }: { movie: MovieItem }) {
+  return (
+    <div className="flex items-center gap-3" style={{ height: ITEM_H }}>
+      {m.poster && (
+        <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
+          m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
+        }`} />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="flex-1 h-1.5 bg-[#1A1210] rounded-full overflow-hidden">
+            <div className="h-full bg-[#EF9870] rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
+          </div>
+          <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
   const bg = MTA_COLORS[line] ?? "#555";
   const isYellow = ["N", "Q", "R", "W"].includes(line);
@@ -383,53 +450,17 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
-          {movies?.movies ? (
-            <ul className="space-y-3">
-              {movies.movies.filter((m: { genre: string | null }) => !quietOnly || !m.genre || !["Action", "Horror", "Thriller"].includes(m.genre)).slice(0, 5).map((m: { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string }) => (
-                <li key={m.id} className="flex items-center gap-3">
-                  {m.poster && (
-                    <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
-                      m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
-                    }`} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex-1 h-1.5 bg-[#1A1210] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#EF9870] rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
-                      </div>
-                      <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
+          {(() => {
+            const filtered = movies?.movies?.filter((m: { genre: string | null }) => !quietOnly || !m.genre || !["Action", "Horror", "Thriller"].includes(m.genre)).slice(0, 8) ?? [];
+            return filtered.length > 0 ? (
+              <CreditsCycle movies={filtered} />
+            ) : (
+              <div className="text-[#AE6455] text-sm">Loading...</div>
+            );
+          })()}
         </section>
 
-        {/* ── Letterboxd Watchlist ────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watchlist</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(watchlist?.updatedAt)}</span>
-          </div>
-          {watchlist?.watchlist ? (
-            <ul className="space-y-2">
-              {watchlist.watchlist.map((w: { title: string; year: string; link: string }, i: number) => (
-                <li key={i} className="text-sm">
-                  <span className="text-[#F4C9AC]">{w.title}</span>
-                  <span className="text-[#AE6455] ml-1">({w.year})</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
-        </section>
-
-        {/* ── Minutes Watched ────────────────────────────────────────── */}
+        {/* ── Watched This Year + Watchlist ─────────────────────────── */}
         <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
             <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watched This Year</h2>
@@ -457,6 +488,26 @@ export default function DashboardPage() {
           ) : (
             <div className="text-[#AE6455] text-sm">Loading...</div>
           )}
+          {watchlist?.watchlist?.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-[#AE645533]">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Watchlist</div>
+              <div className="flex items-start justify-center gap-4">
+                {watchlist.watchlist.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
+                  <div key={i} className="flex flex-col items-center" style={{ width: "48px" }}>
+                    <img src={w.poster!} alt={w.title} className={`w-12 h-[72px] rounded object-cover ${
+                      w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.5)]" : "ring-1 ring-[#AE645533]"
+                    }`} />
+                    <div className={`text-[8px] text-center leading-tight mt-1.5 line-clamp-2 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── TBD ─────────────────────────────────────────────────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] flex items-center justify-center">
+          <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
 
         {/* ── Books ─────────────────────────────────────────────────── */}

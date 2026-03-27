@@ -8,5 +8,13 @@
     { "label": "NYC", "tz": "America/New_York" },
     { "label": "UTC", "tz": "UTC" },
     { "label": "SF", "tz": "America/Los_Angeles" }
-  ]
+  ],
+  "streamingProviders": {
+    "netflix": true,
+    "prime": true,
+    "max": true,
+    "crunchyroll": true,
+    "hulu": true,
+    "disney": true
+  }
 }

@@ -7,6 +7,7 @@ export interface DashboardConfig {
   letterboxd: string;
   goodreads: string;
   timezones: { label: string; tz: string }[];
+  streamingProviders?: Record<string, boolean>;
 }
 
 export function getConfig(): DashboardConfig {

@@ -28,8 +28,23 @@ interface TmdbListResponse {
 }
 
 // TMDB watch provider IDs (US region)
-// Netflix=8, Amazon Prime Video=9, HBO Max/Max=1899, Crunchyroll=283
-const PROVIDER_IDS = "8|9|1899|283";
+const PROVIDER_MAP: Record<string, number> = {
+  netflix: 8,
+  prime: 9,
+  max: 1899,
+  crunchyroll: 283,
+  hulu: 15,
+  disney: 337,
+};
+
+function getProviderIds(config: ReturnType<typeof getConfig>): string {
+  const providers = config.streamingProviders ?? {};
+  return Object.entries(providers)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => PROVIDER_MAP[key])
+    .filter(Boolean)
+    .join("|");
+}
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -108,10 +123,18 @@ export async function GET() {
 
     const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
 
-    // Fetch in parallel: now playing, trending, watched, and watchlist
-    const [nowPlaying, trending, watchedIds, watchlistIds] = await Promise.all([
+    const providerIds = getProviderIds(config);
+
+    // Fetch in parallel: now playing, streaming (discover by provider), watched, and watchlist
+    const [nowPlaying, streaming, watchedIds, watchlistIds] = await Promise.all([
       tmdbFetch<TmdbListResponse>("/movie/now_playing", { region: "US" }),
-      tmdbFetch<TmdbListResponse>("/trending/movie/week"),
+      tmdbFetch<TmdbListResponse>("/discover/movie", {
+        watch_region: "US",
+        with_watch_providers: providerIds,
+        sort_by: "popularity.desc",
+        "vote_count.gte": "50",
+        "release_date.gte": cutoff,
+      }),
       fetchLetterboxdRssIds(`https://letterboxd.com/${config.letterboxd}/rss/`),
       fetchLetterboxdWatchlist(config.letterboxd),
     ]);
@@ -123,7 +146,7 @@ export async function GET() {
     for (const m of nowPlaying.results) {
       if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "theater" }); }
     }
-    for (const m of trending.results) {
+    for (const m of streaming.results) {
       if (!seen.has(m.id) && (isRecent(m) || watchlistIds.has(m.id))) {
         seen.add(m.id); all.push({ ...m, source: "streaming" });
       }
@@ -134,7 +157,7 @@ export async function GET() {
       .map((m) => ({ ...m, _score: score(m), fromWatchlist: watchlistIds.has(m.id) }))
       .sort((a, b) => b._score - a._score);
 
-    // Guarantee: 2 theater, 1 watchlist (if available on streaming), fill rest
+    // Guarantee: 2 theater, 1 watchlist (if in trending/now_playing), fill rest
     const reserved = new Set<number>();
     const picks: typeof unwatched = [];
 
