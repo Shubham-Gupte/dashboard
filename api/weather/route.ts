@@ -89,6 +89,7 @@ export async function GET() {
         temp: Math.round(data.current.temperature_2m),
         feelsLike: Math.round(data.current.apparent_temperature),
         condition: WMO_CODES[data.current.weather_code] ?? "Unknown",
+        weatherCode: data.current.weather_code,
         windSpeed: Math.round(data.current.wind_speed_10m),
         humidity: data.current.relative_humidity_2m,
       },
@@ -96,6 +97,7 @@ export async function GET() {
         high: Math.round(max),
         low: Math.round(data.daily.temperature_2m_min[i]),
         condition: WMO_CODES[data.daily.weather_code[i]] ?? "Unknown",
+        weatherCode: data.daily.weather_code[i],
       })),
       updatedAt: new Date().toISOString(),
     });

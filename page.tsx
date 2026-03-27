@@ -27,6 +27,76 @@ function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
   );
 }
 
+// WMO weather code → Font Awesome SVG icon (free set)
+function WeatherIcon({ code, size = 24 }: { code?: number; size?: number }) {
+  if (code == null) return null;
+  const s = size;
+  const props = { width: s, height: s, viewBox: "0 0 512 512", fill: "currentColor" };
+
+  // Sun: clear (0), mostly clear (1)
+  if (code <= 1) return (
+    <svg {...props} className="text-[#FCCC0A]">
+      <path d="M361.5 1.2c5 2.1 8.6 6.6 9.6 11.9L391 121l107.9 19.8c5.3 1 9.8 4.6 11.9 9.6s1.5 10.7-1.6 15.2L446.9 256l62.3 90.3c3.1 4.5 3.7 10.2 1.6 15.2s-6.6 8.6-11.9 9.6L391 391 371.1 498.9c-1 5.3-4.6 9.8-9.6 11.9s-10.7 1.5-15.2-1.6L256 446.9l-90.3 62.3c-4.5 3.1-10.2 3.7-15.2 1.6s-8.6-6.6-9.6-11.9L121 391 13.1 371.1c-5.3-1-9.8-4.6-11.9-9.6s-1.5-10.7 1.6-15.2L65.1 256 2.8 165.7c-3.1-4.5-3.7-10.2-1.6-15.2s6.6-8.6 11.9-9.6L121 121 140.9 13.1c1-5.3 4.6-9.8 9.6-11.9s10.7-1.5 15.2 1.6L256 65.1 346.3 2.8c4.5-3.1 10.2-3.7 15.2-1.6zM256 160a96 96 0 1 0 0 192 96 96 0 1 0 0-192z"/>
+    </svg>
+  );
+
+  // Partly cloudy (2)
+  if (code === 2) return (
+    <svg {...props} className="text-[#F4C9AC]">
+      <path d="M294.2 1.2c5.1 2.1 8.7 6.7 9.6 12.1l14.1 84.7 84.7 14.1c5.4 .9 10 4.5 12.1 9.6s1.5 10.9-1.6 15.4l-38.5 55c-2.2-.1-4.4-.2-6.7-.2c-23.3 0-45.1 6.2-64 17.1l0-1.1c0-53-43-96-96-96s-96 43-96 96 43 96 96 96c8.1 0 15.9-1 23.4-2.9c-3.6 11.6-5.4 24-5.4 36.9 0 6 .4 11.8 1.3 17.5l-43.5 30c-4.5 3.1-10.2 3.7-15.4 1.6s-8.7-6.7-9.6-12.1L243.3 278.2l-84.7-14.1c-5.4-.9-10-4.5-12.1-9.6s-1.5-10.9 1.6-15.4L186.6 192l-38.5-47.1c-3.1-4.5-3.7-10.2-1.6-15.4s6.7-8.7 12.1-9.6l84.7-14.1 14.1-84.7c.9-5.4 4.5-10 9.6-12.1s10.9-1.5 15.4 1.6L320 49.1l47.1-38.5c4.5-3.1 10.2-3.7 15.4-1.6zM288 224a64 64 0 1 1 128 0 64 64 0 1 1-128 0zM304 384a144 144 0 1 1 288 0 144 144 0 1 1-288 0zm-16 0a160 160 0 0 0 160 160H128c-70.7 0-128-57.3-128-128 0-61.9 44-113.6 102.4-125.4 4.1-40.7 38.6-72.6 80.6-72.6 34.5 0 64.3 21.5 76.2 51.9 9.8-3.9 20.5-5.9 31.8-5.9z"/>
+    </svg>
+  );
+
+  // Overcast (3)
+  if (code === 3) return (
+    <svg {...props} className="text-[#AE6455]">
+      <path d="M0 336c0 79.5 64.5 144 144 144H512c70.7 0 128-57.3 128-128c0-61.9-44-113.6-102.4-125.4c4.1-10.7 6.4-22.4 6.4-34.6c0-53-43-96-96-96c-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32C167.6 32 96 103.6 96 192c0 2.7 .1 5.4 .2 8C40.2 219.8 0 273.2 0 336z"/>
+    </svg>
+  );
+
+  // Fog (45, 48)
+  if (code === 45 || code === 48) return (
+    <svg {...props} className="text-[#AE6455]">
+      <path d="M0 336c0 79.5 64.5 144 144 144H512c70.7 0 128-57.3 128-128c0-61.9-44-113.6-102.4-125.4c4.1-10.7 6.4-22.4 6.4-34.6c0-53-43-96-96-96c-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32C167.6 32 96 103.6 96 192c0 2.7 .1 5.4 .2 8C40.2 219.8 0 273.2 0 336z" opacity="0.6"/>
+    </svg>
+  );
+
+  // Drizzle/light rain (51-55, 80)
+  if ((code >= 51 && code <= 55) || code === 80) return (
+    <svg {...props} className="text-[#6CAADF]">
+      <path d="M96 320c-53 0-96-43-96-96c0-42.5 27.6-78.6 65.9-91.2C168.9 40.5 259.8-15.2 369.1 8.9c82.2 18.2 144.8 86.4 152.7 169.9C576 189.4 640 260 640 345c0 79.5-64.5 144-144 144H144 96zm49.8 84.8l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8zm128-24l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8zm128 24l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8z"/>
+    </svg>
+  );
+
+  // Rain (61-65, 81-82)
+  if ((code >= 61 && code <= 65) || (code >= 81 && code <= 82)) return (
+    <svg {...props} className="text-[#4A90D9]">
+      <path d="M96 320c-53 0-96-43-96-96c0-42.5 27.6-78.6 65.9-91.2C168.9 40.5 259.8-15.2 369.1 8.9c82.2 18.2 144.8 86.4 152.7 169.9C576 189.4 640 260 640 345c0 79.5-64.5 144-144 144H144 96zm49.8 84.8l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8zm128-24l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8zm128 24l-4.4 7c-9.1 14.5-28.3 18.9-42.8 9.8s-18.9-28.3-9.8-42.8l4.4-7c9.1-14.5 28.3-18.9 42.8-9.8s18.9 28.3 9.8 42.8z"/>
+    </svg>
+  );
+
+  // Snow (71-77, 85-86)
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return (
+    <svg {...props} className="text-[#D4E5F7]">
+      <path d="M234.5 5.7c13.4-6.6 29.2-2.1 37.4 10.4L384 192l112.2-176c8.3-12.5 24-17 37.4-10.4s19.6 21.2 14.4 35.2L440 256l108 215.2c5.2 14-1 29.5-14.4 35.2s-29.2 2.1-37.4-10.4L384 320 271.8 496c-8.3 12.5-24 17-37.4 10.4s-19.6-21.2-14.4-35.2L328 256 220 40.8c-5.2-14 1-29.5 14.4-35.2z"/>
+    </svg>
+  );
+
+  // Thunderstorm (95-99)
+  if (code >= 95) return (
+    <svg {...props} className="text-[#FCCC0A]">
+      <path d="M0 224c0 53 43 96 96 96h47.2L96 384H54.8C24.6 384 0 408.6 0 438.8c0 25.9 18.1 48.3 43.4 53.8l154.4 33.2c-6-17.5-9.8-36.1-9.8-55.8c0-97.2 78.8-176 176-176c27.2 0 52.8 6.4 75.8 17.6C494.4 247 544 189 544 120C544 53.7 490.3 0 424 0c-24.3 0-46.8 7.3-65.7 19.7C329.3 7.5 294.8 0 259 0 155.4 0 72 83.4 72 187v5.4C30.8 206.8 0 247.4 0 296v-72zm325.6 32l-37.1 96H352l-69.3 160 37.1-128H256l69.3-128z"/>
+    </svg>
+  );
+
+  // Default: cloud
+  return (
+    <svg {...props} className="text-[#AE6455]">
+      <path d="M0 336c0 79.5 64.5 144 144 144H512c70.7 0 128-57.3 128-128c0-61.9-44-113.6-102.4-125.4c4.1-10.7 6.4-22.4 6.4-34.6c0-53-43-96-96-96c-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32C167.6 32 96 103.6 96 192c0 2.7 .1 5.4 .2 8C40.2 219.8 0 273.2 0 336z"/>
+    </svg>
+  );
+}
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function timeAgo(iso: string | undefined): string {
@@ -108,21 +178,29 @@ export default function DashboardPage() {
           </div>
           {weather?.current ? (
             <>
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
-                <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
-              </div>
-              <div className="text-xs text-[#AE6455] space-x-4">
-                <span>Feels {weather.current.feelsLike}°</span>
-                <span>Wind {weather.current.windSpeed} mph</span>
-                <span>{weather.current.humidity}% humidity</span>
+              <div className="flex items-center gap-4 mb-2">
+                <WeatherIcon code={weather.current.weatherCode} size={40} />
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
+                    <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
+                  </div>
+                  <div className="text-xs text-[#AE6455] space-x-3 mt-1">
+                    <span>Feels {weather.current.feelsLike}°</span>
+                    <span>Wind {weather.current.windSpeed} mph</span>
+                    <span>{weather.current.humidity}%</span>
+                  </div>
+                </div>
               </div>
               {weather.forecast && (
                 <div className="flex gap-4 mt-4 pt-4 border-t border-[#AE645533]">
-                  {weather.forecast.map((d: { high: number; low: number; condition: string }, i: number) => (
-                    <div key={i} className="text-xs text-[#EF9870]">
-                      <div className="text-[#F4C9AC] font-mono">{d.high}° / {d.low}°</div>
-                      <div>{d.condition}</div>
+                  {weather.forecast.map((d: { high: number; low: number; condition: string; weatherCode: number }, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <WeatherIcon code={d.weatherCode} size={18} />
+                      <div>
+                        <div className="text-[#F4C9AC] font-mono">{d.high}° / {d.low}°</div>
+                        <div className="text-[#EF9870]">{d.condition}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
