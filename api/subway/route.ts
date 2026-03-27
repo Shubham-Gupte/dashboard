@@ -226,7 +226,7 @@ export async function GET() {
       console.error("Subway alerts fetch error:", alertErr);
     }
 
-    return NextResponse.json({
+return NextResponse.json({
       station: config.subwayStation,
       lines,
       arrivals: deduped,
