@@ -60,8 +60,7 @@ async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
 function score(m: TmdbMovie, maxPop: number): number {
   const normPop = maxPop > 0 ? m.popularity / maxPop : 0; // 0-1
   const normRating = m.vote_average / 10; // 0-1
-  const confidence = Math.min(m.vote_count / 500, 1); // 0-1, saturates at 500 votes
-  return normPop * 0.3 + normRating * confidence * 0.7;
+  return normRating * 0.85 + normPop * 0.15;
 }
 
 export async function GET() {
