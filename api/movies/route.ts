@@ -36,7 +36,7 @@ const parser = new XMLParser({
   attributeNamePrefix: "@_",
 });
 
-async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
+async function fetchLetterboxdRssIds(url: string): Promise<Set<number>> {
   const ids = new Set<number>();
   try {
     const res = await fetch(url, {
@@ -50,6 +50,47 @@ async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
     for (const item of items) {
       const tmdbId = parseInt(item["tmdb:movieId"], 10);
       if (tmdbId) ids.add(tmdbId);
+    }
+  } catch {
+    // non-fatal
+  }
+  return ids;
+}
+
+async function fetchLetterboxdWatchlist(username: string): Promise<Set<number>> {
+  const ids = new Set<number>();
+  const ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+  try {
+    // Scrape paginated watchlist HTML
+    const names: { title: string; year: string }[] = [];
+    for (let page = 1; page <= 5; page++) {
+      const url = page === 1
+        ? `https://letterboxd.com/${username}/watchlist/`
+        : `https://letterboxd.com/${username}/watchlist/page/${page}/`;
+      const res = await fetch(url, { headers: { "User-Agent": ua }, next: { revalidate: 3600 } });
+      if (!res.ok) break;
+      const html = await res.text();
+      // Extract data-item-name="Title (Year)" from poster divs
+      const re = /data-item-name="([^"]+)"/g;
+      let match;
+      while ((match = re.exec(html)) !== null) {
+        const raw = match[1].replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+        const m = raw.match(/^(.+?)\s*\((\d{4})\)$/);
+        if (m) names.push({ title: m[1], year: m[2] });
+      }
+      // Stop if no next page
+      if (!html.includes(`/watchlist/page/${page + 1}/`)) break;
+    }
+
+    // Resolve TMDB IDs via search (parallel, batched)
+    const searches = names.map(({ title, year }) =>
+      tmdbFetch<{ results: { id: number }[] }>("/search/movie", { query: title, year })
+        .then((r) => r.results[0]?.id)
+        .catch(() => undefined)
+    );
+    const results = await Promise.all(searches);
+    for (const id of results) {
+      if (id) ids.add(id);
     }
   } catch {
     // non-fatal
@@ -71,8 +112,8 @@ export async function GET() {
     const [nowPlaying, trending, watchedIds, watchlistIds] = await Promise.all([
       tmdbFetch<TmdbListResponse>("/movie/now_playing", { region: "US" }),
       tmdbFetch<TmdbListResponse>("/trending/movie/week"),
-      fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/rss/`),
-      fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/watchlist/rss/`),
+      fetchLetterboxdRssIds(`https://letterboxd.com/${config.letterboxd}/rss/`),
+      fetchLetterboxdWatchlist(config.letterboxd),
     ]);
 
     // Merge, dedupe, filter to last 90 days (watchlist bypasses date filter)
