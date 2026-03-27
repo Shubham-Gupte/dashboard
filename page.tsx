@@ -127,6 +127,7 @@ const TIMEZONES = [
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const [hideGenres, setHideGenres] = useState<Set<string>>(new Set());
   useEffect(() => setMounted(true), []);
 
   // ── SWR hooks ──────────────────────────────────────────────────────
@@ -377,9 +378,20 @@ export default function DashboardPage() {
             <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Now Showing</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
+          <div className="flex gap-1.5 mb-3">
+            {["Action", "Horror", "Thriller"].map((g) => (
+              <button key={g} onClick={() => setHideGenres((prev) => {
+                const next = new Set(prev);
+                next.has(g) ? next.delete(g) : next.add(g);
+                return next;
+              })} className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                hideGenres.has(g) ? "border-[#AE6455] bg-[#AE645522] text-[#AE6455] line-through" : "border-[#AE645533] text-[#F4C9AC]"
+              }`}>{g}</button>
+            ))}
+          </div>
           {movies?.movies ? (
             <ul className="space-y-3">
-              {movies.movies.map((m: { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string }) => (
+              {movies.movies.filter((m: { genre: string | null }) => !m.genre || !hideGenres.has(m.genre)).map((m: { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string }) => (
                 <li key={m.id} className="flex items-center gap-3">
                   {m.poster && (
                     <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
