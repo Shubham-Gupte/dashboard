@@ -57,10 +57,8 @@ async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
   return ids;
 }
 
-function score(m: TmdbMovie, maxPop: number): number {
-  const normPop = maxPop > 0 ? m.popularity / maxPop : 0; // 0-1
-  const normRating = m.vote_average / 10; // 0-1
-  return normRating * 0.85 + normPop * 0.15;
+function score(m: TmdbMovie): number {
+  return m.vote_average;
 }
 
 export async function GET() {
@@ -90,10 +88,9 @@ export async function GET() {
       }
     }
 
-    const maxPop = Math.max(...all.map((m) => m.popularity), 1);
     const unwatched = all
       .filter((m) => !watchedIds.has(m.id))
-      .map((m) => ({ ...m, _score: score(m, maxPop), fromWatchlist: watchlistIds.has(m.id) }))
+      .map((m) => ({ ...m, _score: score(m), fromWatchlist: watchlistIds.has(m.id) }))
       .sort((a, b) => b._score - a._score);
 
     // Guarantee: 2 theater, 1 watchlist (if available on streaming), fill rest
