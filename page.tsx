@@ -208,6 +208,12 @@ export default function DashboardPage() {
                   })}
                 </div>
               )}
+              {funFact?.fact && (
+                <div className="mt-4 pt-3 border-t border-[#AE645533]">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">Fun Fact</div>
+                  <p className="text-xs text-[#EF9870] leading-relaxed">{funFact.fact}</p>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-[#AE6455] text-sm">Loading...</div>
@@ -430,17 +436,9 @@ export default function DashboardPage() {
           <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
 
-        {/* ── Fun Fact ───────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Fun Fact</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(funFact?.updatedAt)}</span>
-          </div>
-          {funFact?.fact ? (
-            <p className="text-sm text-[#F4C9AC] leading-relaxed">{funFact.fact}</p>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
+        {/* ── TBD ─────────────────────────────────────────────────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] flex items-center justify-center">
+          <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
       </div>
     </div>
