@@ -70,8 +70,22 @@ export async function GET() {
     // Fetch today's events in Eastern time
     const tz = "America/New_York";
     const nowET = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
-    const todayStart = `${nowET}T00:00:00`;
-    const todayEnd = `${nowET}T23:59:59`;
+
+    // Google Calendar API accepts timeZone param and interprets times in that zone
+    // Using full ISO with Z and letting the timeZone param handle the day boundary
+    const dayStart = new Date(`${nowET}T00:00:00`);
+    const dayEnd = new Date(`${nowET}T23:59:59`);
+    // Compute ET offset: format a date in ET to get the UTC offset
+    const etNow = new Date();
+    const utcStr = etNow.toLocaleString("en-US", { timeZone: "UTC" });
+    const etStr = etNow.toLocaleString("en-US", { timeZone: tz });
+    const offsetMs = new Date(utcStr).getTime() - new Date(etStr).getTime();
+    const offsetH = Math.floor(Math.abs(offsetMs) / 3600000);
+    const offsetM = Math.floor((Math.abs(offsetMs) % 3600000) / 60000);
+    const sign = offsetMs >= 0 ? "-" : "+";
+    const tzOffset = `${sign}${String(offsetH).padStart(2, "0")}:${String(offsetM).padStart(2, "0")}`;
+    const todayStart = `${nowET}T00:00:00${tzOffset}`;
+    const todayEnd = `${nowET}T23:59:59${tzOffset}`;
 
     const eventsUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     eventsUrl.searchParams.set("timeMin", todayStart);
