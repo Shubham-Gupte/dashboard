@@ -221,8 +221,8 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Calendar ───────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] max-h-[400px] flex flex-col">
+          <div className="flex justify-between items-baseline mb-4 flex-shrink-0">
             <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Today</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
           </div>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
               }
 
               return (
-                <>
+                <div className="overflow-y-auto flex-1 min-h-0">
                   {allDay.length > 0 && (
                     <div className="mb-3 space-y-1">
                       {allDay.map((e, i) => (
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                       );
                     })}
                   </div>
-                </>
+                </div>
               );
             })() : (
               <p className="text-[#AE6455] text-sm">No events today</p>
