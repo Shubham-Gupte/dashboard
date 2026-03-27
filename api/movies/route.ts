@@ -59,15 +59,10 @@ export async function GET() {
 
     const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
 
-    // Fetch in parallel: now playing, streaming, watched, and watchlist
-    const [nowPlaying, streaming, watchedIds, watchlistIds] = await Promise.all([
+    // Fetch in parallel: now playing, trending, watched, and watchlist
+    const [nowPlaying, trending, watchedIds, watchlistIds] = await Promise.all([
       tmdbFetch<TmdbListResponse>("/movie/now_playing", { region: "US" }),
-      tmdbFetch<TmdbListResponse>("/discover/movie", {
-        watch_region: "US",
-        with_watch_providers: PROVIDER_IDS,
-        sort_by: "popularity.desc",
-        "release_date.gte": cutoff,
-      }),
+      tmdbFetch<TmdbListResponse>("/trending/movie/week"),
       fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/rss/`),
       fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/watchlist/rss/`),
     ]);
@@ -75,12 +70,12 @@ export async function GET() {
     // Merge, dedupe, and filter to last 90 days
     const seen = new Set<number>();
     const all: (TmdbMovie & { source: string })[] = [];
-    const isRecent = (m: TmdbMovie) => !m.release_date || m.release_date >= cutoff;
+    const isRecent = (m: TmdbMovie) => m.release_date != null && m.release_date >= cutoff;
     for (const m of nowPlaying.results) {
       if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "theater" }); }
     }
-    for (const m of streaming.results) {
-      if (!seen.has(m.id)) { seen.add(m.id); all.push({ ...m, source: "streaming" }); }
+    for (const m of trending.results) {
+      if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "streaming" }); }
     }
 
     const unwatched = all
@@ -109,7 +104,7 @@ export async function GET() {
     const movies = scored.map((m) => ({
       id: m.id,
       title: m.title,
-      rating: m.vote_average,
+      rating: Math.round(m.vote_average * 10) / 10,
       heat: m._score / maxScore,
       poster: m.poster_path ? `https://image.tmdb.org/t/p/w154${m.poster_path}` : null,
       source: m.source,

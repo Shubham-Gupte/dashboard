@@ -382,7 +382,9 @@ export default function DashboardPage() {
               {movies.movies.map((m: { id: number; title: string; rating: number; heat: number; poster: string | null; source: string }) => (
                 <li key={m.id} className="flex items-center gap-3">
                   {m.poster && (
-                    <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${m.source === "theater" ? "ring-2 ring-[#EE352E]" : ""}`} />
+                    <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
+                      m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
+                    }`} />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate text-[#F4C9AC]">{m.title}</div>
