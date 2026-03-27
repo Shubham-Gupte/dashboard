@@ -104,7 +104,7 @@ export async function GET() {
     if (watchlistPick) { picks.push({ ...watchlistPick, source: "watchlist" }); reserved.add(watchlistPick.id); }
 
     for (const m of unwatched) {
-      if (picks.length >= 5) break;
+      if (picks.length >= 15) break;
       if (!reserved.has(m.id)) { picks.push(m); reserved.add(m.id); }
     }
 
