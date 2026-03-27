@@ -49,8 +49,11 @@ async function fetchLetterboxdIds(url: string): Promise<Set<number>> {
   return ids;
 }
 
-function score(m: TmdbMovie): number {
-  return m.popularity * 0.4 + (m.vote_average * m.vote_count) / 1000 * 0.6;
+function score(m: TmdbMovie, maxPop: number): number {
+  const normPop = maxPop > 0 ? m.popularity / maxPop : 0; // 0-1
+  const normRating = m.vote_average / 10; // 0-1
+  const confidence = Math.min(m.vote_count / 500, 1); // 0-1, saturates at 500 votes
+  return normPop * 0.3 + normRating * confidence * 0.7;
 }
 
 export async function GET() {
@@ -67,7 +70,7 @@ export async function GET() {
       fetchLetterboxdIds(`https://letterboxd.com/${config.letterboxd}/watchlist/rss/`),
     ]);
 
-    // Merge, dedupe, and filter to last 90 days
+    // Merge, dedupe, filter to last 90 days (watchlist bypasses date filter)
     const seen = new Set<number>();
     const all: (TmdbMovie & { source: string })[] = [];
     const isRecent = (m: TmdbMovie) => m.release_date != null && m.release_date >= cutoff;
@@ -75,12 +78,15 @@ export async function GET() {
       if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "theater" }); }
     }
     for (const m of trending.results) {
-      if (!seen.has(m.id) && isRecent(m)) { seen.add(m.id); all.push({ ...m, source: "streaming" }); }
+      if (!seen.has(m.id) && (isRecent(m) || watchlistIds.has(m.id))) {
+        seen.add(m.id); all.push({ ...m, source: "streaming" });
+      }
     }
 
+    const maxPop = Math.max(...all.map((m) => m.popularity), 1);
     const unwatched = all
       .filter((m) => !watchedIds.has(m.id))
-      .map((m) => ({ ...m, _score: score(m), fromWatchlist: watchlistIds.has(m.id) }))
+      .map((m) => ({ ...m, _score: score(m, maxPop), fromWatchlist: watchlistIds.has(m.id) }))
       .sort((a, b) => b._score - a._score);
 
     // Guarantee: 2 theater, 1 watchlist (if available on streaming), fill rest
