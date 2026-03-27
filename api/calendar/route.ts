@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readFileSync } from "fs";
 
 export const revalidate = 300; // 5 min ISR
 
@@ -12,14 +13,17 @@ interface CalendarEvent {
 export async function GET() {
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const keyFile = process.env.GCS_KEY_FILE;
 
-  if (!calendarId || !serviceAccountJson) {
+  if (!calendarId || (!serviceAccountJson && !keyFile)) {
     return NextResponse.json({ error: "Google Calendar not configured" }, { status: 500 });
   }
 
   try {
-    // Parse service account credentials
-    const creds = JSON.parse(serviceAccountJson);
+    // Parse service account credentials from env var or key file
+    const creds = serviceAccountJson
+      ? JSON.parse(serviceAccountJson)
+      : JSON.parse(readFileSync(keyFile!, "utf-8"));
 
     // Build JWT for Google API auth
     const now = Math.floor(Date.now() / 1000);
