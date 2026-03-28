@@ -502,11 +502,6 @@ export default function DashboardPage() {
           })()}
         </section>
 
-        {/* ── TBD ─────────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533] flex items-center justify-center">
-          <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
-        </section>
-
         {/* ── Watched This Year ───────────────────────────────────────── */}
         <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
@@ -550,6 +545,11 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* ── TBD ─────────────────────────────────────────────────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533] flex items-center justify-center">
+          <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
 
         {/* ── TBD ─────────────────────────────────────────────────────── */}
