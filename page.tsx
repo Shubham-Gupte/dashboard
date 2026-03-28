@@ -207,6 +207,7 @@ export default function DashboardPage() {
   const { data: subway } = useSWR("/dashboard/api/subway", fetcher, { refreshInterval: 30_000 });
   const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, { refreshInterval: 300_000 });
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, { refreshInterval: 3600_000 });
+  const { data: todos } = useSWR("/dashboard/api/todo", fetcher, { refreshInterval: 600_000 });
 
   const now = new Date().toISOString();
 
@@ -505,9 +506,44 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ── TBD ─────────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] flex items-center justify-center">
-          <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
+        {/* ── To-Do ────────────────────────────────────────────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
+          <div className="flex justify-between items-baseline mb-4">
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
+          </div>
+          {todos ? (
+            <div className="grid grid-cols-2 gap-px bg-[#AE645522] rounded overflow-hidden">
+              {todos.personal?.length > 0 && (
+                <div className="bg-[#2A1F1B] p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
+                  <ul className="space-y-2">
+                    {todos.personal.map((t: string, i: number) => (
+                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-[#AE6455] mt-px">·</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {todos.work?.length > 0 && (
+                <div className="bg-[#2A1F1B] p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
+                  <ul className="space-y-2">
+                    {todos.work.map((t: string, i: number) => (
+                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-[#AE6455] mt-px">·</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-[#AE6455] text-sm">Loading...</div>
+          )}
         </section>
 
         {/* ── Books ─────────────────────────────────────────────────── */}
