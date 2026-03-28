@@ -208,6 +208,7 @@ export default function DashboardPage() {
   const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, { refreshInterval: 300_000 });
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, { refreshInterval: 3600_000 });
   const { data: todos } = useSWR("/dashboard/api/todo", fetcher, { refreshInterval: 600_000 });
+  const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, { refreshInterval: 86400_000 });
 
   const now = new Date().toISOString();
 
@@ -238,9 +239,9 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-min">
         {/* ── Weather ────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
             <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Weather</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
@@ -440,8 +441,148 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ── Movies in Theaters ──────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
+        {/* ── To-Do (was row2 col3, now row2 col1) ─────────────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
+          <div className="flex justify-between items-baseline mb-4">
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
+          </div>
+          {todos ? (
+            <div className="grid grid-cols-2 gap-px bg-[#AE645522] rounded overflow-hidden">
+              {todos.personal?.length > 0 && (
+                <div className="bg-[#2A1F1B] p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
+                  <ul className="space-y-2.5">
+                    {todos.personal.map((t: string, i: number) => (
+                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-[#AE6455] mt-px">·</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {todos.work?.length > 0 && (
+                <div className="bg-[#2A1F1B] p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
+                  <ul className="space-y-2.5">
+                    {todos.work.map((t: string, i: number) => (
+                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
+                        <span className="text-[#AE6455] mt-px">·</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-[#AE6455] text-sm">Loading...</div>
+          )}
+        </section>
+
+        {/* ── Watched + Books (center column, spans 2 rows) ────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533] lg:row-span-2">
+          {/* Watched This Year */}
+          <div className="flex justify-between items-baseline mb-4">
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watched This Year</h2>
+            <span className="text-xs text-[#AE6455]">{timeAgo(diary?.updatedAt)}</span>
+          </div>
+          {diary ? (
+            <>
+              <div className="flex items-baseline gap-4 mb-3">
+                <div>
+                  <span className="text-3xl font-light font-mono text-[#F4C9AC]">{diary.filmCount ?? 0}</span>
+                  <span className="text-[#AE6455] text-xs ml-1">films</span>
+                </div>
+                <div>
+                  <span className="text-3xl font-light font-mono text-[#F4C9AC]">{diary.totalMinutes ? Math.round(diary.totalMinutes / 60) : 0}</span>
+                  <span className="text-[#AE6455] text-xs ml-1">hours</span>
+                </div>
+              </div>
+              {diary.diary?.slice(0, 5).map((d: { title: string; watchedDate: string; rating: number | null; runtime: number }, i: number) => (
+                <div key={i} className="text-xs text-[#AE6455] flex justify-between py-0.5">
+                  <span className="text-[#EF9870] truncate mr-2">{d.title}</span>
+                  <span className="flex-shrink-0 text-[#F4C9AC]">{d.rating ? `${"★".repeat(Math.round(d.rating))}` : "—"}</span>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-[#AE6455] text-sm">Loading...</div>
+          )}
+          {/* Watchlist */}
+          {watchlist?.watchlist?.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-[#AE645533]">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Watchlist</div>
+              <div className="flex items-start justify-center gap-4">
+                {watchlist.watchlist.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
+                  <div key={i} className="flex flex-col items-center" style={{ width: "48px" }}>
+                    <img src={w.poster!} alt={w.title} className={`w-12 h-[72px] rounded object-cover ${
+                      w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.5)]" : "ring-1 ring-[#AE645533]"
+                    }`} />
+                    <div className={`text-[8px] text-center leading-tight mt-1.5 line-clamp-2 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Books */}
+          <div className="mt-5 pt-4 border-t border-[#AE645533]">
+            <div className="flex justify-between items-baseline mb-3">
+              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Books</h2>
+              <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
+            </div>
+            {booksRead ? (
+              <>
+                <div className="flex items-baseline gap-4 mb-3">
+                  <div>
+                    <span className="text-3xl font-light font-mono text-[#F4C9AC]">{booksRead.count ?? 0}</span>
+                    <span className="text-[#AE6455] text-xs ml-1">read in &apos;26</span>
+                  </div>
+                </div>
+                <ul className="space-y-1.5">
+                  {booksRead.books?.slice(0, 3).map((b: { title: string; author: string; rating: number | null; pages: number | null }, i: number) => (
+                    <li key={i} className="text-xs">
+                      <div className="text-[#F4C9AC] truncate">{b.title}</div>
+                      <div className="text-[10px] text-[#AE6455]">{b.author} {b.rating ? `· ${b.rating}/5` : ""}</div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <div className="text-[#AE6455] text-sm">Loading...</div>
+            )}
+            {booksToRead?.books && (
+              <div className="mt-3 pt-3 border-t border-[#AE645522]">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Up Next</div>
+                <ul className="space-y-1.5">
+                  {booksToRead.books.slice(0, 2).map((b: { title: string; author: string; avgRating: number; pages: number | null }, i: number) => (
+                    <li key={i} className="text-xs">
+                      <div className="text-[#EF9870] truncate">{b.title}</div>
+                      <div className="text-[10px] text-[#AE6455]">{b.author}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {trending?.books?.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-[#AE645522]">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Bestsellers</div>
+                <div className="flex gap-3 justify-center">
+                  {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
+                    <div key={i} className="flex flex-col items-center" style={{ width: "48px" }}>
+                      <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533]" />
+                      <div className="text-[8px] text-[#AE6455] text-center leading-tight mt-1.5 line-clamp-2">{b.title.charAt(0) + b.title.slice(1).toLowerCase()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── Now Showing (was row2 col1, now row2 col3) ──────────── */}
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
           <div className="flex justify-between items-baseline mb-4">
             <div className="flex items-baseline gap-3">
               <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Now Showing</h2>
@@ -461,137 +602,13 @@ export default function DashboardPage() {
           })()}
         </section>
 
-        {/* ── Watched This Year + Watchlist ─────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Watched This Year</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(diary?.updatedAt)}</span>
-          </div>
-          {diary ? (
-            <>
-              <div className="flex items-baseline gap-4 mb-3">
-                <div>
-                  <span className="text-4xl font-light font-mono text-[#F4C9AC]">{diary.filmCount ?? 0}</span>
-                  <span className="text-[#AE6455] text-sm ml-1">films</span>
-                </div>
-                <div>
-                  <span className="text-4xl font-light font-mono text-[#F4C9AC]">{diary.totalMinutes ? Math.round(diary.totalMinutes / 60) : 0}</span>
-                  <span className="text-[#AE6455] text-sm ml-1">hours</span>
-                </div>
-              </div>
-              {diary.diary?.slice(0, 5).map((d: { title: string; watchedDate: string; rating: number | null; runtime: number }, i: number) => (
-                <div key={i} className="text-xs text-[#AE6455] flex justify-between py-0.5">
-                  <span className="text-[#EF9870] truncate mr-2">{d.title}</span>
-                  <span className="flex-shrink-0 text-[#F4C9AC]">{d.rating ? `${"★".repeat(Math.round(d.rating))}` : "—"}</span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
-          {watchlist?.watchlist?.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-[#AE645533]">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Watchlist</div>
-              <div className="flex items-start justify-center gap-4">
-                {watchlist.watchlist.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
-                  <div key={i} className="flex flex-col items-center" style={{ width: "48px" }}>
-                    <img src={w.poster!} alt={w.title} className={`w-12 h-[72px] rounded object-cover ${
-                      w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.5)]" : "ring-1 ring-[#AE645533]"
-                    }`} />
-                    <div className={`text-[8px] text-center leading-tight mt-1.5 line-clamp-2 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* ── To-Do ────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
-          </div>
-          {todos ? (
-            <div className="grid grid-cols-2 gap-px bg-[#AE645522] rounded overflow-hidden">
-              {todos.personal?.length > 0 && (
-                <div className="bg-[#2A1F1B] p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
-                  <ul className="space-y-2">
-                    {todos.personal.map((t: string, i: number) => (
-                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
-                        <span className="text-[#AE6455] mt-px">·</span>
-                        <span>{t}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {todos.work?.length > 0 && (
-                <div className="bg-[#2A1F1B] p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
-                  <ul className="space-y-2">
-                    {todos.work.map((t: string, i: number) => (
-                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
-                        <span className="text-[#AE6455] mt-px">·</span>
-                        <span>{t}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
-        </section>
-
-        {/* ── Books ─────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Books</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
-          </div>
-          {booksRead ? (
-            <>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-4xl font-light font-mono text-[#F4C9AC]">{booksRead.count ?? 0}</span>
-                <span className="text-[#AE6455] text-sm">read in &apos;26</span>
-              </div>
-              <ul className="space-y-1.5">
-                {booksRead.books?.slice(0, 3).map((b: { title: string; author: string; rating: number | null; pages: number | null }, i: number) => (
-                  <li key={i} className="text-sm">
-                    <div className="text-[#F4C9AC] truncate">{b.title}</div>
-                    <div className="text-xs text-[#AE6455]">{b.author} {b.rating ? `· ${b.rating}/5` : ""}</div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
-          )}
-          {booksToRead?.books && (
-            <div className="mt-4 pt-3 border-t border-[#AE645533]">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Up Next</div>
-              <ul className="space-y-1.5">
-                {booksToRead.books.slice(0, 3).map((b: { title: string; author: string; avgRating: number; pages: number | null }, i: number) => (
-                  <li key={i} className="text-sm">
-                    <div className="text-[#EF9870] truncate">{b.title}</div>
-                    <div className="text-xs text-[#AE6455]">{b.author}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-
         {/* ── TBD ─────────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] flex items-center justify-center">
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533] flex items-center justify-center">
           <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
 
         {/* ── TBD ─────────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] flex items-center justify-center">
+        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533] flex items-center justify-center">
           <span className="text-sm font-mono uppercase tracking-widest text-[#AE645544]">TBD</span>
         </section>
       </div>
