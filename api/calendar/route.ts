@@ -11,11 +11,11 @@ interface CalendarEvent {
 }
 
 export async function GET() {
-  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const calendarIds = (process.env.GOOGLE_CALENDAR_ID ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   const keyFile = process.env.GCS_KEY_FILE;
 
-  if (!calendarId || (!serviceAccountJson && !keyFile)) {
+  if (calendarIds.length === 0 || (!serviceAccountJson && !keyFile)) {
     return NextResponse.json({ error: "Google Calendar not configured" }, { status: 500 });
   }
 
@@ -67,15 +67,9 @@ export async function GET() {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error("Failed to get access token");
 
-    // Fetch today's events in Eastern time
+    // Compute today's time bounds in Eastern time
     const tz = "America/New_York";
     const nowET = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
-
-    // Google Calendar API accepts timeZone param and interprets times in that zone
-    // Using full ISO with Z and letting the timeZone param handle the day boundary
-    const dayStart = new Date(`${nowET}T00:00:00`);
-    const dayEnd = new Date(`${nowET}T23:59:59`);
-    // Compute ET offset: format a date in ET to get the UTC offset
     const etNow = new Date();
     const utcStr = etNow.toLocaleString("en-US", { timeZone: "UTC" });
     const etStr = etNow.toLocaleString("en-US", { timeZone: tz });
@@ -87,28 +81,44 @@ export async function GET() {
     const todayStart = `${nowET}T00:00:00${tzOffset}`;
     const todayEnd = `${nowET}T23:59:59${tzOffset}`;
 
-    const eventsUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
-    eventsUrl.searchParams.set("timeMin", todayStart);
-    eventsUrl.searchParams.set("timeMax", todayEnd);
-    eventsUrl.searchParams.set("timeZone", tz);
-    eventsUrl.searchParams.set("singleEvents", "true");
-    eventsUrl.searchParams.set("orderBy", "startTime");
+    // Fetch events from all calendars in parallel
+    const allEvents = await Promise.all(
+      calendarIds.map(async (calId) => {
+        const eventsUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`);
+        eventsUrl.searchParams.set("timeMin", todayStart);
+        eventsUrl.searchParams.set("timeMax", todayEnd);
+        eventsUrl.searchParams.set("timeZone", tz);
+        eventsUrl.searchParams.set("singleEvents", "true");
+        eventsUrl.searchParams.set("orderBy", "startTime");
 
-    const eventsRes = await fetch(eventsUrl.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      next: { revalidate: 300 },
-    });
-    if (!eventsRes.ok) throw new Error(`Calendar API: ${eventsRes.status}`);
-    const eventsData = await eventsRes.json();
-
-    const events: CalendarEvent[] = (eventsData.items ?? []).map(
-      (e: { summary?: string; start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string }; location?: string }) => ({
-        summary: e.summary ?? "(No title)",
-        start: e.start?.dateTime ?? e.start?.date ?? "",
-        end: e.end?.dateTime ?? e.end?.date ?? "",
-        location: e.location,
+        const res = await fetch(eventsUrl.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          next: { revalidate: 300 },
+        });
+        if (!res.ok) {
+          console.error(`Calendar ${calId}: ${res.status}`);
+          return [];
+        }
+        const data = await res.json();
+        return (data.items ?? []).map(
+          (e: { summary?: string; start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string }; location?: string }) => ({
+            summary: e.summary ?? "(No title)",
+            start: e.start?.dateTime ?? e.start?.date ?? "",
+            end: e.end?.dateTime ?? e.end?.date ?? "",
+            location: e.location,
+          })
+        ) as CalendarEvent[];
       })
     );
+
+    // Merge and dedupe by summary+start, sort by start time
+    const seen = new Set<string>();
+    const events = allEvents.flat().filter((e) => {
+      const key = `${e.summary}|${e.start}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => a.start.localeCompare(b.start));
 
     return NextResponse.json({ events, updatedAt: new Date().toISOString() });
   } catch (err) {
