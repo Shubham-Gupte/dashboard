@@ -79,7 +79,7 @@ const TICKERS = [
 ];
 
 async function fetchMarketQuotes(): Promise<NewsItem[]> {
-  const results = await Promise.all(
+  const results: (NewsItem | null)[] = await Promise.all(
     TICKERS.map(async ({ symbol, label }) => {
       try {
         const res = await fetch(
