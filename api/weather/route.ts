@@ -22,6 +22,11 @@ interface OpenMeteoResponse {
     temperature_2m_min: number[];
     weather_code: number[];
   };
+  hourly: {
+    time: string[];
+    precipitation: number[];
+    precipitation_probability: number[];
+  };
 }
 
 const WMO_CODES: Record<number, string> = {
@@ -75,6 +80,7 @@ export async function GET() {
     url.searchParams.set("longitude", String(lon));
     url.searchParams.set("current", "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m");
     url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,weather_code");
+    url.searchParams.set("hourly", "precipitation,precipitation_probability");
     url.searchParams.set("temperature_unit", "fahrenheit");
     url.searchParams.set("wind_speed_unit", "mph");
     url.searchParams.set("forecast_days", "3");
@@ -84,6 +90,65 @@ export async function GET() {
     if (!res.ok) throw new Error(`Open-Meteo: ${res.status}`);
     const data: OpenMeteoResponse = await res.json();
 
+    // Precipitation duration: scan hourly data from now forward
+    let precipMessage: string | null = null;
+    const isPrecipCode = data.current.weather_code >= 51; // 51+ = drizzle/rain/snow/thunderstorm
+    const now = new Date();
+    const hours = data.hourly.time;
+    const precip = data.hourly.precipitation;
+    const prob = data.hourly.precipitation_probability;
+
+    // Find the current hour index
+    const nowISO = now.toISOString().slice(0, 13);
+    let startIdx = hours.findIndex((h) => h.startsWith(nowISO));
+    if (startIdx < 0) {
+      // Fallback: find first hour after now
+      startIdx = hours.findIndex((h) => new Date(h).getTime() >= now.getTime());
+    }
+    if (startIdx >= 0) {
+      if (isPrecipCode) {
+        // Currently precipitating — find when it stops
+        let endIdx = startIdx;
+        while (endIdx < hours.length && (precip[endIdx] > 0 || prob[endIdx] >= 40)) {
+          endIdx++;
+        }
+        if (endIdx < hours.length) {
+          const endTime = new Date(hours[endIdx]);
+          const diffMs = endTime.getTime() - now.getTime();
+          const diffHrs = Math.round(diffMs / 3600000);
+          if (diffHrs <= 1) {
+            precipMessage = "Ending soon";
+          } else {
+            const fmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", timeZone: "America/New_York" });
+            precipMessage = `Until ${fmt.format(endTime)}`;
+          }
+        } else {
+          precipMessage = "All day";
+        }
+      } else {
+        // Not currently precipitating — check if precip is coming in next 12 hours
+        const lookAhead = Math.min(startIdx + 12, hours.length);
+        let rainStart = -1;
+        for (let i = startIdx; i < lookAhead; i++) {
+          if (precip[i] > 0 || prob[i] >= 50) {
+            rainStart = i;
+            break;
+          }
+        }
+        if (rainStart >= 0) {
+          const startTime = new Date(hours[rainStart]);
+          const fmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", timeZone: "America/New_York" });
+          // Find how long it lasts
+          let rainEnd = rainStart;
+          while (rainEnd < hours.length && (precip[rainEnd] > 0 || prob[rainEnd] >= 40)) {
+            rainEnd++;
+          }
+          const durationHrs = rainEnd - rainStart;
+          precipMessage = `Rain at ${fmt.format(startTime)} (~${durationHrs}h)`;
+        }
+      }
+    }
+
     return NextResponse.json({
       current: {
         temp: Math.round(data.current.temperature_2m),
@@ -92,6 +157,7 @@ export async function GET() {
         weatherCode: data.current.weather_code,
         windSpeed: Math.round(data.current.wind_speed_10m),
         humidity: data.current.relative_humidity_2m,
+        precipMessage,
       },
       forecast: data.daily.temperature_2m_max.map((max, i) => ({
         high: Math.round(max),
