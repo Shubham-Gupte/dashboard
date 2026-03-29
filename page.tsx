@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 
 const MTA_COLORS: Record<string, string> = {
   "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
@@ -195,6 +195,8 @@ const TIMEZONES = [
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [quietOnly, setQuietOnly] = useState(false);
+  const [completing, setCompleting] = useState<Set<string>>(new Set());
+  const { mutate } = useSWRConfig();
   useEffect(() => setMounted(true), []);
 
   // ── SWR hooks ──────────────────────────────────────────────────────
@@ -212,6 +214,20 @@ export default function DashboardPage() {
   const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
   const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
   const { data: news } = useSWR("/dashboard/api/news", fetcher, swr(900_000));
+
+  const completeTodo = async (blockId: string) => {
+    setCompleting((prev) => new Set(prev).add(blockId));
+    await fetch("/dashboard/api/todo", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blockId }),
+    });
+    // Wait for fade-out animation, then remove from cache
+    setTimeout(() => {
+      mutate("/dashboard/api/todo");
+      setCompleting((prev) => { const next = new Set(prev); next.delete(blockId); return next; });
+    }, 400);
+  };
 
   const now = new Date().toISOString();
 
@@ -328,10 +344,19 @@ export default function DashboardPage() {
                 <div className="bg-[#2A1F1B] p-3">
                   <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
                   <ul className="space-y-2.5">
-                    {todos.personal.map((t: string, i: number) => (
-                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
-                        <span className="text-[#AE6455] mt-px">·</span>
-                        <span>{t}</span>
+                    {todos.personal.map((t: { id: string; text: string }) => (
+                      <li
+                        key={t.id}
+                        className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "opacity-0 line-through translate-x-2" : ""}`}
+                      >
+                        <button
+                          onClick={() => completeTodo(t.id)}
+                          disabled={completing.has(t.id)}
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                        >
+                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                        </button>
+                        <span>{t.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -341,10 +366,19 @@ export default function DashboardPage() {
                 <div className="bg-[#2A1F1B] p-3">
                   <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
                   <ul className="space-y-2.5">
-                    {todos.work.map((t: string, i: number) => (
-                      <li key={i} className="text-xs text-[#F4C9AC] flex items-start gap-1.5 leading-relaxed">
-                        <span className="text-[#AE6455] mt-px">·</span>
-                        <span>{t}</span>
+                    {todos.work.map((t: { id: string; text: string }) => (
+                      <li
+                        key={t.id}
+                        className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "opacity-0 line-through translate-x-2" : ""}`}
+                      >
+                        <button
+                          onClick={() => completeTodo(t.id)}
+                          disabled={completing.has(t.id)}
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                        >
+                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                        </button>
+                        <span>{t.text}</span>
                       </li>
                     ))}
                   </ul>
