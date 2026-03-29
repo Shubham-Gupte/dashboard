@@ -198,17 +198,19 @@ export default function DashboardPage() {
   useEffect(() => setMounted(true), []);
 
   // ── SWR hooks ──────────────────────────────────────────────────────
-  const { data: movies } = useSWR("/dashboard/api/movies", fetcher, { refreshInterval: 6 * 3600_000 });
-  const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, { refreshInterval: 3600_000 });
-  const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, { refreshInterval: 3600_000 });
-  const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, { refreshInterval: 3600_000 });
-  const { data: booksToRead } = useSWR("/dashboard/api/goodreads?shelf=to-read", fetcher, { refreshInterval: 3600_000 });
-  const { data: weather } = useSWR("/dashboard/api/weather", fetcher, { refreshInterval: 1800_000 });
-  const { data: subway } = useSWR("/dashboard/api/subway", fetcher, { refreshInterval: 30_000 });
-  const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, { refreshInterval: 300_000 });
-  const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, { refreshInterval: 3600_000 });
-  const { data: todos } = useSWR("/dashboard/api/todo", fetcher, { refreshInterval: 600_000 });
-  const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, { refreshInterval: 86400_000 });
+  // refreshWhenHidden keeps polling even when tab is backgrounded (TV dashboard)
+  const swr = (ms: number) => ({ refreshInterval: ms, refreshWhenHidden: true });
+  const { data: movies } = useSWR("/dashboard/api/movies", fetcher, swr(6 * 3600_000));
+  const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, swr(3600_000));
+  const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, swr(3600_000));
+  const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, swr(3600_000));
+  const { data: booksToRead } = useSWR("/dashboard/api/goodreads?shelf=to-read", fetcher, swr(3600_000));
+  const { data: weather } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
+  const { data: subway } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
+  const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
+  const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
+  const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
+  const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
 
   const now = new Date().toISOString();
 
