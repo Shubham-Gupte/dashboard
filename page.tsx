@@ -211,6 +211,7 @@ export default function DashboardPage() {
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
   const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
   const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
+  const { data: news } = useSWR("/dashboard/api/news", fetcher, swr(900_000));
 
   const now = new Date().toISOString();
 
@@ -240,6 +241,29 @@ export default function DashboardPage() {
           ))}
         </div>
       </header>
+
+      {/* ── News Ticker ──────────────────────────────────────────────── */}
+      {news?.stories?.length > 0 && (
+        <div className="mb-5 bg-[#2A1F1B] rounded-xl border border-[#AE645533] overflow-hidden">
+          <div className="flex items-center">
+            <div className="bg-[#AE645533] px-3 py-2 flex-shrink-0">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#EF9870]">News</span>
+            </div>
+            <div className="overflow-hidden flex-1 py-2">
+              <div className="animate-ticker flex whitespace-nowrap">
+                {[...news.stories, ...news.stories].map((s: { title: string; source: string }, i: number) => (
+                  <span key={i} className="inline-flex items-center mx-6 text-xs">
+                    <span className={`font-mono text-[10px] mr-2 px-1.5 py-0.5 rounded ${
+                      s.source === "HN" ? "bg-[#FF660022] text-[#FF6600]" : s.source === "MKT" ? "bg-[#6CBE4522] text-[#6CBE45]" : "bg-[#AE645522] text-[#EF9870]"
+                    }`}>{s.source}</span>
+                    <span className="text-[#F4C9AC]">{s.title}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-min">
         {/* ── Weather ────────────────────────────────────────────────── */}
@@ -613,6 +637,7 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
+
     </div>
   );
 }
