@@ -212,6 +212,8 @@ export default function DashboardPage() {
   const { data: subway } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
   const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
+  const { data: events } = useSWR("/dashboard/api/events", fetcher, swr(3600_000));
+  const { data: galleries } = useSWR("/dashboard/api/galleries", fetcher, swr(86400_000));
   const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
   const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
   const { data: news } = useSWR("/dashboard/api/news", fetcher, swr(900_000));
@@ -235,11 +237,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10">
       {/* Header */}
-      <header className="mb-10 flex items-start justify-between">
+      <header className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-light tracking-tight font-mono text-[#F4C9AC]">Dashboard</h1>
           <p className="text-[#AE6455] text-sm mt-1 font-mono">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
+            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-70">— {funFact.fact}</span>}
           </p>
         </div>
         <div className="flex gap-6 items-baseline font-mono">
@@ -309,25 +312,30 @@ export default function DashboardPage() {
                 </div>
               </div>
               {weather.forecast && (
-                <div className="flex gap-4 mt-4 pt-4 border-t border-[#AE645533]">
+                <div className="flex justify-between mt-3 pt-3 border-t border-[#AE645533]">
                   {weather.forecast.map((d: { high: number; low: number; condition: string; weatherCode: number }, i: number) => {
                     const day = i === 0 ? "Today" : new Date(Date.now() + i * 86400000).toLocaleDateString("en-US", { weekday: "short" });
                     return (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <WeatherIcon code={d.weatherCode} size={18} />
-                        <div>
-                          <div className="text-[10px] uppercase tracking-widest text-[#AE6455]">{day}</div>
-                          <div className="text-[#F4C9AC] font-mono">{d.high}° / {d.low}°</div>
-                        </div>
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
+                        <WeatherIcon code={d.weatherCode} size={14} />
+                        <span className="text-[10px] text-[#AE6455]">{day}</span>
+                        <span className="text-[#F4C9AC] font-mono text-[11px]">{d.high}°/{d.low}°</span>
                       </div>
                     );
                   })}
                 </div>
               )}
-              {funFact?.fact && (
-                <div className="mt-4 pt-3 border-t border-[#AE645533]">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">Fun Fact</div>
-                  <p className="text-xs text-[#EF9870] leading-relaxed">{funFact.fact}</p>
+              {galleries?.exhibits?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-[#AE645533]">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Nearby Art Galleries</div>
+                  <div className="space-y-1">
+                    {galleries.exhibits.slice(0, 4).map((g: { artist: string; gallery: string; location: string }, i: number) => (
+                      <div key={i} className="text-xs flex justify-between">
+                        <span className="text-[#EF9870] truncate mr-2">{g.artist}</span>
+                        <span className="text-[#AE6455] flex-shrink-0 text-[10px]">{g.gallery}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
@@ -424,20 +432,20 @@ export default function DashboardPage() {
 
         {/* ── Subway ─────────────────────────────────────────────────── */}
         <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Subway</h2>
-            <span className="text-xs text-[#AE6455]">{timeAgo(subway?.updatedAt)}</span>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Subway</h2>
+              {subway?.lines?.map((l: string) => (
+                <SubwayIcon key={l} line={l} size={16} />
+              ))}
+            </div>
+            <div className="flex items-baseline gap-2">
+              {subway?.station && <span className="text-[10px] text-[#AE6455] font-mono">{subway.station}</span>}
+              <span className="text-xs text-[#AE6455]">{timeAgo(subway?.updatedAt)}</span>
+            </div>
           </div>
           {subway ? (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg font-mono font-light text-[#F4C9AC]">{subway.station}</span>
-                <div className="flex gap-1 ml-auto">
-                  {subway.lines?.map((l: string) => (
-                    <SubwayIcon key={l} line={l} size={20} />
-                  ))}
-                </div>
-              </div>
               {subway.arrivals?.length > 0 ? (
                 <div className="grid grid-cols-2 gap-px bg-[#AE645533]">
                   {["Uptown", "Downtown"].map((dir) => {
@@ -479,6 +487,19 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              {events?.events?.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-[#AE645533]">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Nearby Today</div>
+                  <div className="space-y-1.5">
+                    {events.events.slice(0, 3).map((e: { title: string; location: string; time: string; category: string }, i: number) => (
+                      <div key={i} className="text-xs flex justify-between">
+                        <span className="text-[#F4C9AC] truncate mr-2">{e.title}</span>
+                        {e.time && <span className="text-[#AE6455] flex-shrink-0 font-mono">{e.time}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
