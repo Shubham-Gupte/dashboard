@@ -131,3 +131,54 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Failed to update block" }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest) {
+  const apiKey = process.env.NOTION_API_KEY;
+  const todoPageId = process.env.NOTION_TODO_DB;
+  const workPageId = process.env.NOTION_WORK_DB;
+
+  if (!apiKey || !todoPageId) {
+    return NextResponse.json({ error: "Notion not configured" }, { status: 500 });
+  }
+
+  const { text, list } = await req.json();
+  if (!text || typeof text !== "string") {
+    return NextResponse.json({ error: "Missing text" }, { status: 400 });
+  }
+
+  const pageId = list === "work" && workPageId ? workPageId : todoPageId;
+
+  try {
+    const res = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        children: [{
+          object: "block",
+          type: "to_do",
+          to_do: {
+            rich_text: [{ type: "text", text: { content: text } }],
+            checked: false,
+          },
+        }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Notion POST error:", err);
+      return NextResponse.json({ error: "Failed to create todo" }, { status: res.status });
+    }
+
+    const data = await res.json();
+    const block = data.results?.[0];
+    return NextResponse.json({ id: block?.id, text });
+  } catch (err) {
+    console.error("Notion POST error:", err);
+    return NextResponse.json({ error: "Failed to create todo" }, { status: 500 });
+  }
+}

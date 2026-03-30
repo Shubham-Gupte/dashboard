@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR, { useSWRConfig } from "swr";
 
 const MTA_COLORS: Record<string, string> = {
@@ -15,6 +15,66 @@ const MTA_COLORS: Record<string, string> = {
 };
 
 type MovieItem = { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string };
+
+function Confetti({ active }: { active: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (!active || fired.current) return;
+    fired.current = true;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const colors = ["#EF9870", "#6CBE45", "#FCCC0A", "#F4C9AC", "#EE352E", "#4A90D9"];
+    const particles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * canvas.height * 0.3,
+      w: 4 + Math.random() * 4,
+      h: 6 + Math.random() * 6,
+      vx: (Math.random() - 0.5) * 3,
+      vy: 2 + Math.random() * 4,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+    }));
+
+    let raf: number;
+    const tick = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const p of particles) {
+        if (p.life <= 0) continue;
+        alive = true;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.rot += p.vr;
+        p.life -= 0.008;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      if (alive) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active]);
+
+  useEffect(() => { if (!active) fired.current = false; }, [active]);
+
+  if (!active) return null;
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-50" />;
+}
 
 function useIsPi(): boolean {
   const [isPi, setIsPi] = useState(false);
@@ -96,7 +156,7 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
         href: `https://www.themoviedb.org/movie/${m.id}`,
         title: m.title,
         source: "MOVIE",
-        className: "flex items-center gap-3 hover:bg-[#AE645511] rounded px-1 -mx-1 transition-colors h-full",
+        className: "flex items-center gap-3 hover:bg-[#AE645511] rounded px-1 transition-colors h-full",
         children: inner,
       })}
     </div>
@@ -218,11 +278,50 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [quietOnly, setQuietOnly] = useState(false);
   const [completing, setCompleting] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [shared, setShared] = useState<Set<string>>(new Set());
+  const [addingTo, setAddingTo] = useState<"personal" | "work" | null>(null);
+  const [newTodoText, setNewTodoText] = useState("");
+  const [pomo, setPomo] = useState<{ running: boolean; endAt: number; mode: "work" | "break" | "long"; cycle: number }>({ running: false, endAt: 0, mode: "work", cycle: 0 });
+  const [pomoRemaining, setPomoRemaining] = useState(0);
+  const [goalStats, setGoalStats] = useState<{ date: string; startCount: number; completed: number; streak: number }>({ date: "", startCount: 0, completed: 0, streak: 0 });
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [pomoFlash, setPomoFlash] = useState(false);
   const { mutate } = useSWRConfig();
   const isPi = useIsPi();
 
   useEffect(() => setMounted(true), []);
+
+  // Clear dismissed IDs every 10 min — by then Notion has processed the updates
+  useEffect(() => {
+    const id = setInterval(() => setDismissed(new Set()), 600_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Pomodoro timer tick
+  useEffect(() => {
+    if (!pomo.running) return;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.round((pomo.endAt - Date.now()) / 1000));
+      setPomoRemaining(left);
+      if (left <= 0) {
+        // Flash screen red
+        setPomoFlash(true);
+        setTimeout(() => setPomoFlash(false), 1500);
+        // Auto-transition
+        if (pomo.mode === "work") {
+          const nextCycle = pomo.cycle + 1;
+          const isLong = nextCycle % 4 === 0;
+          const dur = isLong ? 15 * 60000 : 5 * 60000;
+          setPomo({ running: true, endAt: Date.now() + dur, mode: isLong ? "long" : "break", cycle: nextCycle });
+        } else {
+          const dur = 25 * 60000;
+          setPomo({ running: true, endAt: Date.now() + dur, mode: "work", cycle: pomo.cycle });
+        }
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [pomo]);
 
   // ── SWR hooks ──────────────────────────────────────────────────────
   // refreshWhenHidden keeps polling even when tab is backgrounded (TV dashboard)
@@ -271,6 +370,69 @@ export default function DashboardPage() {
     return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
   };
 
+  // Goal tracking: sync with localStorage on todo load
+  const dismissedSize = dismissed.size;
+  useEffect(() => {
+    if (!todos) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const stored = JSON.parse(localStorage.getItem("todoGoal") ?? "{}");
+    const totalNow = (todos.personal?.length ?? 0) + (todos.work?.length ?? 0) + dismissedSize;
+
+    let next;
+    if (stored.date === today) {
+      next = { ...stored, completed: dismissedSize };
+    } else {
+      const prevComplete = stored.date ? stored.completed >= stored.startCount && stored.startCount > 0 : false;
+      const streak = prevComplete ? (stored.streak ?? 0) + 1 : stored.date ? 0 : (stored.streak ?? 0);
+      next = { date: today, startCount: totalNow, completed: 0, streak };
+    }
+    // Only update if changed to prevent render loops
+    if (JSON.stringify(next) !== JSON.stringify(goalStats)) {
+      setGoalStats(next);
+      localStorage.setItem("todoGoal", JSON.stringify(next));
+    }
+  }, [todos, dismissedSize]);
+
+  // Trigger confetti when hitting 100%
+  useEffect(() => {
+    if (goalStats.startCount > 0 && goalStats.completed >= goalStats.startCount && !showConfetti) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+  }, [goalStats.completed, goalStats.startCount]);
+
+  const startPomo = () => {
+    setPomo({ running: true, endAt: Date.now() + 25 * 60000, mode: "work", cycle: pomo.cycle });
+    setPomoRemaining(25 * 60);
+  };
+  const stopPomo = () => {
+    setPomo({ ...pomo, running: false });
+    setPomoRemaining(0);
+  };
+
+  const addTodo = async (list: "personal" | "work") => {
+    const text = newTodoText.trim();
+    if (!text) return;
+    setNewTodoText("");
+    setAddingTo(null);
+    // Optimistically add to local cache
+    const tempId = `temp-${Date.now()}`;
+    mutate("/dashboard/api/todo", (current: { personal?: { id: string; text: string }[]; work?: { id: string; text: string }[]; updatedAt?: string } | undefined) => {
+      if (!current) return current;
+      const item = { id: tempId, text };
+      return {
+        ...current,
+        [list]: [...(current[list] ?? []), item],
+      };
+    }, { revalidate: false });
+    // Create in Notion — no revalidation, the optimistic item stays until next SWR refresh
+    fetch("/dashboard/api/todo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, list }),
+    });
+  };
+
   const completeTodo = async (blockId: string) => {
     setCompleting((prev) => new Set(prev).add(blockId));
     fetch("/dashboard/api/todo", {
@@ -278,16 +440,9 @@ export default function DashboardPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ blockId }),
     });
-    // After fade-out animation, optimistically remove from local cache
+    // After fade-out animation, add to dismissed set (survives SWR re-fetches)
     setTimeout(() => {
-      mutate("/dashboard/api/todo", (current: { personal?: { id: string }[]; work?: { id: string }[]; updatedAt?: string } | undefined) => {
-        if (!current) return current;
-        return {
-          ...current,
-          personal: current.personal?.filter((t) => t.id !== blockId),
-          work: current.work?.filter((t) => t.id !== blockId),
-        };
-      }, { revalidate: false });
+      setDismissed((prev) => new Set(prev).add(blockId));
       setCompleting((prev) => { const next = new Set(prev); next.delete(blockId); return next; });
     }, 400);
   };
@@ -296,6 +451,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10">
+      {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
       <header className="mb-4 flex items-start justify-between">
         <div>
@@ -450,7 +606,22 @@ export default function DashboardPage() {
                 : allTimed;
 
               // Build rows: event rows with free gaps between them
-              const rows: { type: "event" | "free"; summary?: string; start?: string; end?: string; location?: string; duration?: number }[] = [];
+              const rows: { type: "event" | "free" | "free-now"; summary?: string; start?: string; end?: string; location?: string; duration?: number }[] = [];
+
+              // Check if we're currently free (no active event) and there's an upcoming one
+              if (mounted) {
+                const hasCurrentEvent = timed.some((e) => new Date(e.start).getTime() <= nowMs && new Date(e.end).getTime() > nowMs);
+                if (!hasCurrentEvent) {
+                  const nextEvent = timed.find((e) => new Date(e.start).getTime() > nowMs);
+                  if (nextEvent) {
+                    const gap = Math.round((new Date(nextEvent.start).getTime() - nowMs) / 60000);
+                    if (gap >= 5) {
+                      rows.push({ type: "free-now", duration: gap });
+                    }
+                  }
+                }
+              }
+
               for (let i = 0; i < timed.length; i++) {
                 const ev = timed[i];
                 // Insert free gap before this event
@@ -473,6 +644,17 @@ export default function DashboardPage() {
                   )}
                   <div className="space-y-1">
                     {rows.map((row, i) => {
+                      if (row.type === "free-now") {
+                        const hrs = Math.floor(row.duration! / 60);
+                        const mins = row.duration! % 60;
+                        const label = hrs > 0 ? (mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`) : `${mins}m`;
+                        return (
+                          <div key={i} className="flex items-center gap-2 py-1.5 px-2 bg-[#6CBE4510] rounded">
+                            <span className="w-2 h-2 rounded-full bg-[#6CBE45] animate-pulse flex-shrink-0" />
+                            <span className="text-xs font-mono text-[#6CBE45]">Free for {label}</span>
+                          </div>
+                        );
+                      }
                       if (row.type === "free") {
                         const hrs = Math.floor(row.duration! / 60);
                         const mins = row.duration! % 60;
@@ -616,61 +798,104 @@ export default function DashboardPage() {
         </section>
 
         {/* ── To-Do ──────────────────────────────────────────────────── */}
+        <Confetti active={showConfetti} />
         <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
-          <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
+          <div className="flex justify-between items-baseline mb-2">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
+              {goalStats.startCount > 0 && (
+                <span className="text-[10px] font-mono text-[#AE6455]">
+                  {Math.min(100, Math.round((goalStats.completed / goalStats.startCount) * 100))}%
+                </span>
+              )}
+              {goalStats.streak > 0 && (
+                <span className="text-[10px] font-mono text-[#AE645588]">
+                  {goalStats.streak}{Array.from({ length: Math.min(goalStats.streak, 7) }, (_, i) => i < goalStats.streak ? "│" : "┊").join("")}
+                </span>
+              )}
+            </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
           </div>
+          {goalStats.startCount > 0 && (
+            <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${goalStats.completed >= goalStats.startCount ? "bg-[#6CBE45]" : "bg-[#EF9870]"}`}
+                style={{ width: `${Math.min(100, (goalStats.completed / goalStats.startCount) * 100)}%` }}
+              />
+            </div>
+          )}
           {todos ? (
             <div className="grid grid-cols-2 gap-px bg-[#AE645522] rounded overflow-hidden">
-              {todos.personal?.length > 0 && (
-                <div className="bg-[#2A1F1B] p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
-                  <ul>
-                    {todos.personal.map((t: { id: string; text: string }) => (
-                      <li
-                        key={t.id}
-                        className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
-                      >
-                        <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
-                          <button
-                            onClick={() => completeTodo(t.id)}
-                            disabled={completing.has(t.id)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
-                          >
-                            {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                          </button>
-                          <span>{t.text}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {todos.work?.length > 0 && (
-                <div className="bg-[#2A1F1B] p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
-                  <ul>
-                    {todos.work.map((t: { id: string; text: string }) => (
-                      <li
-                        key={t.id}
-                        className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
-                      >
-                        <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
-                          <button
-                            onClick={() => completeTodo(t.id)}
-                            disabled={completing.has(t.id)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
-                          >
-                            {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                          </button>
-                          <span>{t.text}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="bg-[#2A1F1B] p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
+                <ul>
+                  {todos.personal?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
+                    <li
+                      key={t.id}
+                      className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
+                    >
+                      <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
+                        <button
+                          onClick={() => completeTodo(t.id)}
+                          disabled={completing.has(t.id)}
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                        >
+                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                        </button>
+                        <span>{t.text}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {addingTo === "personal" ? (
+                  <input
+                    autoFocus
+                    value={newTodoText}
+                    onChange={(e) => setNewTodoText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") addTodo("personal"); if (e.key === "Escape") { setAddingTo(null); setNewTodoText(""); } }}
+                    onBlur={() => setTimeout(() => { setAddingTo(null); setNewTodoText(""); }, 150)}
+                    className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
+                    placeholder="Add todo..."
+                  />
+                ) : (
+                  <button onClick={() => setAddingTo("personal")} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
+                )}
+              </div>
+              <div className="bg-[#2A1F1B] p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
+                <ul>
+                  {todos.work?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
+                    <li
+                      key={t.id}
+                      className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
+                    >
+                      <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
+                        <button
+                          onClick={() => completeTodo(t.id)}
+                          disabled={completing.has(t.id)}
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                        >
+                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                        </button>
+                        <span>{t.text}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {addingTo === "work" ? (
+                  <input
+                    autoFocus
+                    value={newTodoText}
+                    onChange={(e) => setNewTodoText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") addTodo("work"); if (e.key === "Escape") { setAddingTo(null); setNewTodoText(""); } }}
+                    onBlur={() => setTimeout(() => { setAddingTo(null); setNewTodoText(""); }, 150)}
+                    className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
+                    placeholder="Add todo..."
+                  />
+                ) : (
+                  <button onClick={() => setAddingTo("work")} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-[#AE6455] text-sm">Loading...</div>
@@ -741,6 +966,28 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+      </div>
+
+      {/* ── Pomodoro Footer ────────────────────────────────────────── */}
+      <div className="mt-5 bg-[#2A1F1B] rounded-xl border border-[#AE645533] px-5 py-3 flex items-center justify-center gap-4">
+        {pomo.running ? (
+          <>
+            <span className={`text-[10px] font-mono uppercase tracking-widest ${pomo.mode === "work" ? "text-[#EF9870]" : "text-[#6CBE45]"}`}>
+              {pomo.mode === "work" ? "Focus" : pomo.mode === "long" ? "Long Break" : "Break"}
+            </span>
+            <span className={`text-2xl font-mono tabular-nums ${pomo.mode === "work" ? "text-[#F4C9AC]" : "text-[#6CBE45]"}`}>
+              {String(Math.floor(pomoRemaining / 60)).padStart(2, "0")}:{String(pomoRemaining % 60).padStart(2, "0")}
+            </span>
+            <button onClick={stopPomo} className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] hover:text-[#EF9870] transition-colors">
+              Stop
+            </button>
+            <span className="text-[10px] font-mono text-[#AE645566]">#{pomo.cycle + 1}</span>
+          </>
+        ) : (
+          <button onClick={startPomo} className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] hover:text-[#EF9870] transition-colors">
+            Start Focus
+          </button>
+        )}
       </div>
 
     </div>
