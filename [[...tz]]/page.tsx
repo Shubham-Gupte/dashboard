@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 
 const MTA_COLORS: Record<string, string> = {
@@ -268,13 +269,62 @@ function formatTime(dateStr: string, tz: string): string {
 }
 
 // ── Timezones (client-side only, no API) ──────────────────────────────
-const TIMEZONES = [
+const BASE_TIMEZONES = [
   { label: "NYC", tz: "America/New_York" },
   { label: "UTC", tz: "UTC" },
   { label: "SF", tz: "America/Los_Angeles" },
 ];
 
+const TZ_MAP: Record<string, { label: string; tz: string }> = {
+  HKT:  { label: "HK",   tz: "Asia/Hong_Kong" },
+  IST:  { label: "IN",   tz: "Asia/Kolkata" },
+  JST:  { label: "JP",   tz: "Asia/Tokyo" },
+  KST:  { label: "KR",   tz: "Asia/Seoul" },
+  SGT:  { label: "SG",   tz: "Asia/Singapore" },
+  GMT:  { label: "GMT",  tz: "Europe/London" },
+  BST:  { label: "UK",   tz: "Europe/London" },
+  CET:  { label: "CET",  tz: "Europe/Paris" },
+  CEST: { label: "CET",  tz: "Europe/Paris" },
+  EET:  { label: "EET",  tz: "Europe/Bucharest" },
+  MSK:  { label: "MSK",  tz: "Europe/Moscow" },
+  AEST: { label: "SYD",  tz: "Australia/Sydney" },
+  NZST: { label: "NZ",   tz: "Pacific/Auckland" },
+  CST:  { label: "CHI",  tz: "America/Chicago" },
+  MST:  { label: "DEN",  tz: "America/Denver" },
+  HST:  { label: "HI",   tz: "Pacific/Honolulu" },
+  AKST: { label: "AK",   tz: "America/Anchorage" },
+  BRT:  { label: "BR",   tz: "America/Sao_Paulo" },
+  GST:  { label: "DXB",  tz: "Asia/Dubai" },
+  ICT:  { label: "BKK",  tz: "Asia/Bangkok" },
+  WIB:  { label: "JKT",  tz: "Asia/Jakarta" },
+  PHT:  { label: "PH",   tz: "Asia/Manila" },
+  PKT:  { label: "PK",   tz: "Asia/Karachi" },
+  TRT:  { label: "IST",  tz: "Europe/Istanbul" },
+  CAT:  { label: "JNB",  tz: "Africa/Johannesburg" },
+  WAT:  { label: "LOS",  tz: "Africa/Lagos" },
+  EAT:  { label: "NBO",  tz: "Africa/Nairobi" },
+};
+
+function resolveTimezones(slug?: string): { label: string; tz: string }[] {
+  if (!slug) return BASE_TIMEZONES;
+  const key = slug.toUpperCase();
+  const mapped = TZ_MAP[key];
+  if (mapped) {
+    return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], mapped];
+  }
+  // Try as raw IANA timezone (e.g., "Asia/Tokyo")
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: slug });
+    const label = slug.split("/").pop()?.replace(/_/g, " ").slice(0, 5).toUpperCase() ?? key;
+    return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], { label, tz: slug }];
+  } catch {
+    return BASE_TIMEZONES;
+  }
+}
+
 export default function DashboardPage() {
+  const params = useParams<{ tz?: string[] }>();
+  const TIMEZONES = resolveTimezones(params.tz?.[0]);
   const [mounted, setMounted] = useState(false);
   const [quietOnly, setQuietOnly] = useState(false);
   const [completing, setCompleting] = useState<Set<string>>(new Set());
@@ -287,10 +337,18 @@ export default function DashboardPage() {
   const [goalStats, setGoalStats] = useState<{ date: string; personal: { start: number; done: number }; work: { start: number; done: number }; streak: number }>({ date: "", personal: { start: 0, done: 0 }, work: { start: 0, done: 0 }, streak: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [pomoFlash, setPomoFlash] = useState(false);
+  const [seconds, setSeconds] = useState(0);
   const { mutate } = useSWRConfig();
   const isPi = useIsPi();
 
   useEffect(() => setMounted(true), []);
+
+  // Tick seconds for the 60-dot progress line
+  useEffect(() => {
+    setSeconds(new Date().getSeconds());
+    const id = setInterval(() => setSeconds(new Date().getSeconds()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Clear dismissed IDs every 10 min — by then Notion has processed the updates
   useEffect(() => {
@@ -475,20 +533,33 @@ export default function DashboardPage() {
             {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60">— {funFact.fact}</span>}
           </p>
         </div>
-        <div className="flex gap-6 items-baseline font-mono">
-          {TIMEZONES.map((tz) => (
-            <div key={tz.label} className="text-right">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[#AE645588]">{tz.label}</div>
-              <div className="text-lg font-light text-[#F4C9AC] tabular-nums">
-                {mounted ? new Intl.DateTimeFormat("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  timeZone: tz.tz,
-                  hour12: true,
-                }).format(new Date()) : "--:--"}
+        <div className="flex flex-col items-end font-mono">
+          <div className="flex gap-6 items-baseline">
+            {TIMEZONES.map((tz) => (
+              <div key={tz.label} className="text-right">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[#AE645588]">{tz.label}</div>
+                <div className="text-lg font-light text-[#F4C9AC] tabular-nums">
+                  {mounted ? new Intl.DateTimeFormat("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZone: tz.tz,
+                    hour12: true,
+                  }).format(new Date()) : "--:--"}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          {/* 60-second dot progress */}
+          <div className="flex gap-[2px] mt-2">
+            {Array.from({ length: 60 }, (_, i) => (
+              <div
+                key={i}
+                className={`w-[3px] h-[3px] rounded-full transition-colors duration-300 ${
+                  i <= seconds ? "bg-[#EF9870]" : "bg-[#AE645533]"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </header>
 
