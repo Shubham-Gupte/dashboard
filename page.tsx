@@ -378,37 +378,39 @@ export default function DashboardPage() {
           </div>
           {weather?.current ? (
             <>
-              <div className="flex items-center gap-4 mb-2">
-                <WeatherIcon code={weather.current.weatherCode} size={40} />
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
-                    <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
+              <div className="flex items-start gap-4">
+                <div className="flex items-center gap-3">
+                  <WeatherIcon code={weather.current.weatherCode} size={40} />
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
+                      <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
+                    </div>
+                    <div className="text-xs text-[#AE6455] space-x-3 mt-1">
+                      <span>Feels {weather.current.feelsLike}°</span>
+                      <span>Wind {weather.current.windSpeed} mph</span>
+                      <span>{weather.current.humidity}%</span>
+                    </div>
+                    {weather.current.precipMessage && (
+                      <div className="text-xs text-[#FCCC0A] mt-1">{weather.current.precipMessage}</div>
+                    )}
                   </div>
-                  <div className="text-xs text-[#AE6455] space-x-3 mt-1">
-                    <span>Feels {weather.current.feelsLike}°</span>
-                    <span>Wind {weather.current.windSpeed} mph</span>
-                    <span>{weather.current.humidity}%</span>
-                  </div>
-                  {weather.current.precipMessage && (
-                    <div className="text-xs text-[#FCCC0A] mt-1">{weather.current.precipMessage}</div>
-                  )}
                 </div>
+                {weather.forecast && (
+                  <div className="ml-auto flex flex-col gap-1.5 flex-shrink-0">
+                    {weather.forecast.map((d: { high: number; low: number; condition: string; weatherCode: number }, i: number) => {
+                      const day = i === 0 ? "Today" : new Date(Date.now() + i * 86400000).toLocaleDateString("en-US", { weekday: "short" });
+                      return (
+                        <div key={i} className="flex items-center gap-1.5 text-xs">
+                          <WeatherIcon code={d.weatherCode} size={14} />
+                          <span className="text-[10px] text-[#AE6455] w-8">{day}</span>
+                          <span className="text-[#F4C9AC] font-mono text-[11px]">{d.high}°/{d.low}°</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              {weather.forecast && (
-                <div className="flex justify-between mt-3 pt-3 border-t border-[#AE645533]">
-                  {weather.forecast.map((d: { high: number; low: number; condition: string; weatherCode: number }, i: number) => {
-                    const day = i === 0 ? "Today" : new Date(Date.now() + i * 86400000).toLocaleDateString("en-US", { weekday: "short" });
-                    return (
-                      <div key={i} className="flex items-center gap-1.5 text-xs">
-                        <WeatherIcon code={d.weatherCode} size={14} />
-                        <span className="text-[10px] text-[#AE6455]">{day}</span>
-                        <span className="text-[#F4C9AC] font-mono text-[11px]">{d.high}°/{d.low}°</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
               {galleries?.exhibits?.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-[#AE645533]">
                   <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Nearby Art Galleries</div>
