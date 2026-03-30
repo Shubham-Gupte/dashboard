@@ -122,6 +122,7 @@ export async function GET(request: Request) {
         watchedDate: item["letterboxd:watchedDate"],
         rating: item["letterboxd:memberRating"] ? parseFloat(item["letterboxd:memberRating"]) : null,
         runtime,
+        link: item.link,
       });
     }
 

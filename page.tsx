@@ -16,10 +16,21 @@ const MTA_COLORS: Record<string, string> = {
 
 type MovieItem = { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string };
 
+function useIsPi(): boolean {
+  const [isPi, setIsPi] = useState(false);
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    setIsPi(/linux.*arm|aarch64/.test(ua));
+  }, []);
+  return isPi;
+}
+
 const ITEM_H = 56;
 const VISIBLE = 5;
 
-function CreditsCycle({ movies }: { movies: MovieItem[] }) {
+type LinkRenderer = (props: { href: string; title: string; source: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) => React.ReactNode;
+
+function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink: LinkRenderer }) {
   const [px, setPx] = useState(0);
   const count = movies.length;
   const totalH = count * ITEM_H;
@@ -41,7 +52,7 @@ function CreditsCycle({ movies }: { movies: MovieItem[] }) {
   if (count <= VISIBLE) {
     return (
       <div className="space-y-1">
-        {movies.map((m) => <MovieRow key={m.id} movie={m} />)}
+        {movies.map((m) => <MovieRow key={m.id} movie={m} renderLink={renderLink} />)}
       </div>
     );
   }
@@ -53,16 +64,16 @@ function CreditsCycle({ movies }: { movies: MovieItem[] }) {
       <div style={{ transform: `translateY(${-px}px)` }}>
         {/* Triple for seamless wrap */}
         {[0, 1, 2].map((batch) =>
-          movies.map((m, i) => <MovieRow key={`${batch}-${m.id}-${i}`} movie={m} />)
+          movies.map((m, i) => <MovieRow key={`${batch}-${m.id}-${i}`} movie={m} renderLink={renderLink} />)
         )}
       </div>
     </div>
   );
 }
 
-function MovieRow({ movie: m }: { movie: MovieItem }) {
-  return (
-    <div className="flex items-center gap-3" style={{ height: ITEM_H }}>
+function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: LinkRenderer }) {
+  const inner = (
+    <>
       {m.poster && (
         <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
           m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
@@ -77,6 +88,17 @@ function MovieRow({ movie: m }: { movie: MovieItem }) {
           <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
         </div>
       </div>
+    </>
+  );
+  return (
+    <div style={{ height: ITEM_H }}>
+      {renderLink({
+        href: `https://www.themoviedb.org/movie/${m.id}`,
+        title: m.title,
+        source: "MOVIE",
+        className: "flex items-center gap-3 hover:bg-[#AE645511] rounded px-1 -mx-1 transition-colors h-full",
+        children: inner,
+      })}
     </div>
   );
 }
@@ -196,7 +218,9 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [quietOnly, setQuietOnly] = useState(false);
   const [completing, setCompleting] = useState<Set<string>>(new Set());
+  const [shared, setShared] = useState<Set<string>>(new Set());
   const { mutate } = useSWRConfig();
+  const isPi = useIsPi();
 
   useEffect(() => setMounted(true), []);
 
@@ -217,6 +241,35 @@ export default function DashboardPage() {
   const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
   const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
   const { data: news } = useSWR("/dashboard/api/news", fetcher, swr(900_000));
+
+  const shareToDiscord = async (title: string, url: string, source: string) => {
+    if (shared.has(url)) return;
+    setShared((prev) => new Set(prev).add(url));
+    await fetch("/dashboard/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, url, source }),
+    });
+  };
+
+  // On Pi: tap sends to Discord. On desktop: normal link.
+  const DashLink = ({ href, title, source, className, style, children }: {
+    href: string; title: string; source: string; className?: string; style?: React.CSSProperties; children: React.ReactNode;
+  }) => {
+    if (isPi) {
+      return (
+        <button
+          onClick={() => shareToDiscord(title, href, source)}
+          className={`${className ?? ""} ${shared.has(href) ? "opacity-40" : ""}`}
+          style={style}
+        >
+          {children}
+          {shared.has(href) && <span className="text-[#6CBE45] text-[8px] ml-1">✓</span>}
+        </button>
+      );
+    }
+    return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
+  };
 
   const completeTodo = async (blockId: string) => {
     setCompleting((prev) => new Set(prev).add(blockId));
@@ -271,14 +324,38 @@ export default function DashboardPage() {
             </div>
             <div className="overflow-hidden flex-1 py-2">
               <div className="animate-ticker flex whitespace-nowrap">
-                {[...news.stories, ...news.stories].map((s: { title: string; source: string }, i: number) => (
-                  <span key={i} className="inline-flex items-center mx-6 text-xs">
+                {[...news.stories, ...news.stories].map((s: { title: string; url: string; source: string }, i: number) => {
+                  const isShared = shared.has(s.url);
+                  const badge = (
                     <span className={`font-mono text-[10px] mr-2 px-1.5 py-0.5 rounded ${
                       s.source === "HN" ? "bg-[#FF660022] text-[#FF6600]" : s.source === "MKT" ? "bg-[#6CBE4522] text-[#6CBE45]" : "bg-[#AE645522] text-[#EF9870]"
-                    }`}>{s.source}</span>
-                    <span className="text-[#F4C9AC]">{s.title}</span>
-                  </span>
-                ))}
+                    }`}>{isShared ? "✓" : s.source}</span>
+                  );
+                  if (isPi) {
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => shareToDiscord(s.title, s.url, s.source)}
+                        className={`inline-flex items-center mx-6 text-xs transition-opacity ${isShared ? "opacity-40" : "hover:opacity-70 cursor-pointer"}`}
+                      >
+                        {badge}
+                        <span className="text-[#F4C9AC]">{s.title}</span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <a
+                      key={i}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center mx-6 text-xs hover:opacity-70 transition-opacity"
+                    >
+                      {badge}
+                      <span className="text-[#F4C9AC]">{s.title}</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -522,7 +599,7 @@ export default function DashboardPage() {
           {(() => {
             const filtered = movies?.movies?.filter((m: { genre: string | null }) => !quietOnly || !m.genre || !["Action", "Horror", "Thriller"].includes(m.genre)).slice(0, 8) ?? [];
             return filtered.length > 0 ? (
-              <CreditsCycle movies={filtered} />
+              <CreditsCycle movies={filtered} renderLink={DashLink} />
             ) : (
               <div className="text-[#AE6455] text-sm">Loading...</div>
             );
@@ -605,14 +682,18 @@ export default function DashboardPage() {
                   </div>
                 )}
                 {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
-                  <div key={i} className="flex flex-col items-center" style={{ width: "48px" }}>
+                  <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "48px" }}>
                     <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533]" />
                     <div className="text-[8px] text-[#AE6455] text-center leading-tight mt-1.5 line-clamp-2">{b.title.charAt(0) + b.title.slice(1).toLowerCase()}</div>
-                  </div>
+                  </DashLink>
                 ))}
               </div>
               {booksRead?.books?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-2">Last read: <span className="text-[#EF9870]">{booksRead.books[0].title}</span></div>
+                <div className="text-[10px] text-[#AE6455] mt-2">Last read: {booksRead.books[0].link ? (
+                  <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
+                ) : (
+                  <span className="text-[#EF9870]">{booksRead.books[0].title}</span>
+                )}</div>
               )}
             </div>
           )}
@@ -629,16 +710,20 @@ export default function DashboardPage() {
                   </div>
                 )}
                 {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
-                  <div key={i} className="flex flex-col items-center" style={{ width: "44px" }}>
+                  <DashLink key={i} href={w.link} title={w.title} source="FILM" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "44px" }}>
                     <img src={w.poster!} alt={w.title} className={`w-11 h-[66px] rounded object-cover ${
                       w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.5)]" : "ring-1 ring-[#AE645533]"
                     }`} />
                     <div className={`text-[7px] text-center leading-tight mt-1 line-clamp-1 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
-                  </div>
+                  </DashLink>
                 ))}
               </div>
               {diary?.diary?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-2">Last watched: <span className="text-[#EF9870]">{diary.diary[0].title}</span></div>
+                <div className="text-[10px] text-[#AE6455] mt-2">Last watched: {diary.diary[0].link ? (
+                  <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
+                ) : (
+                  <span className="text-[#EF9870]">{diary.diary[0].title}</span>
+                )}</div>
               )}
             </div>
           )}
