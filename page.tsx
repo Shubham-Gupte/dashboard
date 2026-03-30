@@ -273,14 +273,21 @@ export default function DashboardPage() {
 
   const completeTodo = async (blockId: string) => {
     setCompleting((prev) => new Set(prev).add(blockId));
-    await fetch("/dashboard/api/todo", {
+    fetch("/dashboard/api/todo", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ blockId }),
     });
-    // Wait for fade-out animation, then remove from cache
+    // After fade-out animation, optimistically remove from local cache
     setTimeout(() => {
-      mutate("/dashboard/api/todo");
+      mutate("/dashboard/api/todo", (current: { personal?: { id: string }[]; work?: { id: string }[]; updatedAt?: string } | undefined) => {
+        if (!current) return current;
+        return {
+          ...current,
+          personal: current.personal?.filter((t) => t.id !== blockId),
+          work: current.work?.filter((t) => t.id !== blockId),
+        };
+      }, { revalidate: false });
       setCompleting((prev) => { const next = new Set(prev); next.delete(blockId); return next; });
     }, 400);
   };
@@ -617,20 +624,22 @@ export default function DashboardPage() {
               {todos.personal?.length > 0 && (
                 <div className="bg-[#2A1F1B] p-3">
                   <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
-                  <ul className="space-y-2.5">
+                  <ul>
                     {todos.personal.map((t: { id: string; text: string }) => (
                       <li
                         key={t.id}
-                        className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "opacity-0 line-through translate-x-2" : ""}`}
+                        className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
                       >
-                        <button
-                          onClick={() => completeTodo(t.id)}
-                          disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
-                        >
-                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                        </button>
-                        <span>{t.text}</span>
+                        <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
+                          <button
+                            onClick={() => completeTodo(t.id)}
+                            disabled={completing.has(t.id)}
+                            className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                          >
+                            {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                          </button>
+                          <span>{t.text}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -639,20 +648,22 @@ export default function DashboardPage() {
               {todos.work?.length > 0 && (
                 <div className="bg-[#2A1F1B] p-3">
                   <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
-                  <ul className="space-y-2.5">
+                  <ul>
                     {todos.work.map((t: { id: string; text: string }) => (
                       <li
                         key={t.id}
-                        className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "opacity-0 line-through translate-x-2" : ""}`}
+                        className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
                       >
-                        <button
-                          onClick={() => completeTodo(t.id)}
-                          disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
-                        >
-                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                        </button>
-                        <span>{t.text}</span>
+                        <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
+                          <button
+                            onClick={() => completeTodo(t.id)}
+                            disabled={completing.has(t.id)}
+                            className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                          >
+                            {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+                          </button>
+                          <span>{t.text}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
