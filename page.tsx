@@ -119,8 +119,8 @@ function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink:
 
   return (
     <div className="relative overflow-hidden" style={{ height: VISIBLE * ITEM_H }}>
-      <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#2A1F1B] to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2A1F1B] to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(42,31,27,0.95), transparent)" }} />
+      <div className="absolute inset-x-0 bottom-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(42,31,27,0.95), transparent)" }} />
       <div style={{ transform: `translateY(${-px}px)` }}>
         {/* Triple for seamless wrap */}
         {[0, 1, 2].map((batch) =>
@@ -135,15 +135,15 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
   const inner = (
     <>
       {m.poster && (
-        <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 ${
+        <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
           m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
         }`} />
       )}
       <div className="flex-1 min-w-0">
         <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
         <div className="flex items-center gap-2 mt-1">
-          <div className="flex-1 h-1.5 bg-[#1A1210] rounded-full overflow-hidden">
-            <div className="h-full bg-[#EF9870] rounded-full" style={{ width: `${Math.round(m.heat * 100)}%` }} />
+          <div className="flex-1 h-1 bg-[#1A1210] rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.round(m.heat * 100)}%`, background: `linear-gradient(90deg, #AE6455, #EF9870)` }} />
           </div>
           <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
         </div>
@@ -156,7 +156,7 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
         href: `https://www.themoviedb.org/movie/${m.id}`,
         title: m.title,
         source: "MOVIE",
-        className: "flex items-center gap-3 hover:bg-[#AE645511] rounded px-1 transition-colors h-full",
+        className: "flex items-center gap-3 hover:bg-[#AE645511] rounded-lg px-2 transition-all duration-200 h-full group",
         children: inner,
       })}
     </div>
@@ -284,7 +284,7 @@ export default function DashboardPage() {
   const [newTodoText, setNewTodoText] = useState("");
   const [pomo, setPomo] = useState<{ running: boolean; endAt: number; mode: "work" | "break" | "long"; cycle: number }>({ running: false, endAt: 0, mode: "work", cycle: 0 });
   const [pomoRemaining, setPomoRemaining] = useState(0);
-  const [goalStats, setGoalStats] = useState<{ date: string; startCount: number; completed: number; streak: number }>({ date: "", startCount: 0, completed: 0, streak: 0 });
+  const [goalStats, setGoalStats] = useState<{ date: string; personal: { start: number; done: number }; work: { start: number; done: number }; streak: number }>({ date: "", personal: { start: 0, done: 0 }, work: { start: 0, done: 0 }, streak: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [pomoFlash, setPomoFlash] = useState(false);
   const { mutate } = useSWRConfig();
@@ -370,23 +370,28 @@ export default function DashboardPage() {
     return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
   };
 
-  // Goal tracking: sync with localStorage on todo load
+  // Goal tracking: sync with localStorage on todo load (per-list)
   const dismissedSize = dismissed.size;
   useEffect(() => {
     if (!todos) return;
     const today = new Date().toISOString().slice(0, 10);
     const stored = JSON.parse(localStorage.getItem("todoGoal") ?? "{}");
-    const totalNow = (todos.personal?.length ?? 0) + (todos.work?.length ?? 0) + dismissedSize;
+    const pNow = (todos.personal?.length ?? 0);
+    const wNow = (todos.work?.length ?? 0);
+    // Count dismissed per list
+    const pDismissed = todos.personal?.filter((t: { id: string }) => dismissed.has(t.id)).length ?? 0;
+    const wDismissed = todos.work?.filter((t: { id: string }) => dismissed.has(t.id)).length ?? 0;
 
     let next;
     if (stored.date === today) {
-      next = { ...stored, completed: dismissedSize };
+      next = { ...stored, personal: { start: stored.personal?.start ?? pNow + pDismissed, done: pDismissed }, work: { start: stored.work?.start ?? wNow + wDismissed, done: wDismissed } };
     } else {
-      const prevComplete = stored.date ? stored.completed >= stored.startCount && stored.startCount > 0 : false;
+      const totalStart = (stored.personal?.start ?? 0) + (stored.work?.start ?? 0);
+      const totalDone = (stored.personal?.done ?? 0) + (stored.work?.done ?? 0);
+      const prevComplete = stored.date ? totalDone >= totalStart && totalStart > 0 : false;
       const streak = prevComplete ? (stored.streak ?? 0) + 1 : stored.date ? 0 : (stored.streak ?? 0);
-      next = { date: today, startCount: totalNow, completed: 0, streak };
+      next = { date: today, personal: { start: pNow, done: 0 }, work: { start: wNow, done: 0 }, streak };
     }
-    // Only update if changed to prevent render loops
     if (JSON.stringify(next) !== JSON.stringify(goalStats)) {
       setGoalStats(next);
       localStorage.setItem("todoGoal", JSON.stringify(next));
@@ -394,12 +399,14 @@ export default function DashboardPage() {
   }, [todos, dismissedSize]);
 
   // Trigger confetti when hitting 100%
+  const totalStart = goalStats.personal.start + goalStats.work.start;
+  const totalDone = goalStats.personal.done + goalStats.work.done;
   useEffect(() => {
-    if (goalStats.startCount > 0 && goalStats.completed >= goalStats.startCount && !showConfetti) {
+    if (totalStart > 0 && totalDone >= totalStart && !showConfetti) {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
     }
-  }, [goalStats.completed, goalStats.startCount]);
+  }, [totalDone, totalStart]);
 
   const startPomo = () => {
     setPomo({ running: true, endAt: Date.now() + 25 * 60000, mode: "work", cycle: pomo.cycle });
@@ -449,23 +456,30 @@ export default function DashboardPage() {
 
   const now = new Date().toISOString();
 
+  // Time-of-day greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   return (
-    <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10">
+    <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10 relative">
+      {/* Subtle radial glow behind content */}
+      <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
-      <header className="mb-4 flex items-start justify-between">
+      <header className="mb-6 flex items-start justify-between relative">
         <div>
-          <h1 className="text-3xl font-light tracking-tight font-mono text-[#F4C9AC]">Dashboard</h1>
-          <p className="text-[#AE6455] text-sm mt-1 font-mono">
+          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#AE6455] mb-1">{mounted ? greeting : "\u00A0"}</p>
+          <h1 className="text-4xl font-light tracking-tight font-mono bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-[#AE6455] text-sm mt-2 font-mono">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
-            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-70">— {funFact.fact}</span>}
+            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60">— {funFact.fact}</span>}
           </p>
         </div>
         <div className="flex gap-6 items-baseline font-mono">
           {TIMEZONES.map((tz) => (
             <div key={tz.label} className="text-right">
-              <div className="text-[10px] uppercase tracking-widest text-[#AE6455]">{tz.label}</div>
-              <div className="text-lg font-light text-[#F4C9AC]">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-[#AE645588]">{tz.label}</div>
+              <div className="text-lg font-light text-[#F4C9AC] tabular-nums">
                 {mounted ? new Intl.DateTimeFormat("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
@@ -480,12 +494,12 @@ export default function DashboardPage() {
 
       {/* ── News Ticker ──────────────────────────────────────────────── */}
       {news?.stories?.length > 0 && (
-        <div className="mb-5 bg-[#2A1F1B] rounded-xl border border-[#AE645533] overflow-hidden">
+        <div className="mb-5 dash-card overflow-hidden">
           <div className="flex items-center">
-            <div className="bg-[#AE645533] px-3 py-2 flex-shrink-0">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#EF9870]">News</span>
+            <div className="bg-[#AE645520] px-4 py-2.5 flex-shrink-0 border-r border-[#AE645522]">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#EF9870]">News</span>
             </div>
-            <div className="overflow-hidden flex-1 py-2">
+            <div className="overflow-hidden flex-1 py-2 ticker-mask">
               <div className="animate-ticker flex whitespace-nowrap">
                 {[...news.stories, ...news.stories].map((s: { title: string; url: string; source: string }, i: number) => {
                   const isShared = shared.has(s.url);
@@ -525,11 +539,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 gap-5 auto-rows-min">
+      <div className="dash-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 gap-5 auto-rows-min">
         {/* ── Weather ────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
+        <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Weather</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
           </div>
           {weather?.current ? (
@@ -539,7 +553,7 @@ export default function DashboardPage() {
                   <WeatherIcon code={weather.current.weatherCode} size={40} />
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-light font-mono text-[#F4C9AC]">{weather.current.temp}°</span>
+                      <span className="text-5xl font-light font-mono text-[#F4C9AC] tabular-nums">{weather.current.temp}°</span>
                       <span className="text-[#EF9870] text-sm">{weather.current.condition}</span>
                     </div>
                     <div className="text-xs text-[#AE6455] space-x-3 mt-1">
@@ -582,14 +596,14 @@ export default function DashboardPage() {
               )}
             </>
           ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
+            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
           )}
         </section>
 
         {/* ── Calendar ───────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533] max-h-[400px] flex flex-col">
+        <section className="dash-card p-6 max-h-[400px] flex flex-col">
           <div className="flex justify-between items-baseline mb-4 flex-shrink-0">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Today</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Today</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
           </div>
           {calendar?.events ? (
@@ -649,8 +663,8 @@ export default function DashboardPage() {
                         const mins = row.duration! % 60;
                         const label = hrs > 0 ? (mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`) : `${mins}m`;
                         return (
-                          <div key={i} className="flex items-center gap-2 py-1.5 px-2 bg-[#6CBE4510] rounded">
-                            <span className="w-2 h-2 rounded-full bg-[#6CBE45] animate-pulse flex-shrink-0" />
+                          <div key={i} className="flex items-center gap-2.5 py-2 px-3 bg-[#6CBE4508] rounded-lg border border-[#6CBE4520]">
+                            <span className="w-2 h-2 rounded-full bg-[#6CBE45] animate-pulse flex-shrink-0 shadow-[0_0_6px_rgba(108,190,69,0.5)]" />
                             <span className="text-xs font-mono text-[#6CBE45]">Free for {label}</span>
                           </div>
                         );
@@ -670,9 +684,9 @@ export default function DashboardPage() {
                       const isPast = mounted && new Date(row.end!).getTime() < nowMs;
                       const isCurrent = mounted && new Date(row.start!).getTime() <= nowMs && new Date(row.end!).getTime() > nowMs;
                       return (
-                        <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 ${
-                          isCurrent ? "bg-[#AE645522]" : ""
-                        } ${isPast ? "opacity-40" : ""}`}>
+                        <div key={i} className={`flex items-start gap-2 rounded-lg px-2 py-1.5 transition-colors ${
+                          isCurrent ? "bg-[#AE645515] border border-[#AE645522]" : "border border-transparent"
+                        } ${isPast ? "opacity-30" : ""}`}>
                           <div className="w-14 flex-shrink-0 text-[11px] font-mono text-[#AE6455] pt-px">
                             {formatTime(row.start!, "America/New_York")}
                           </div>
@@ -694,15 +708,15 @@ export default function DashboardPage() {
               <p className="text-[#AE6455] text-sm">No events today</p>
             )
           ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
+            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
           )}
         </section>
 
         {/* ── Subway ─────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-6 border border-[#AE645533]">
+        <section className="dash-card p-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Subway</h2>
+              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Subway</h2>
               {subway?.lines?.map((l: string) => (
                 <SubwayIcon key={l} line={l} size={16} />
               ))}
@@ -715,17 +729,17 @@ export default function DashboardPage() {
           {subway ? (
             <>
               {subway.arrivals?.length > 0 ? (
-                <div className="grid grid-cols-2 gap-px bg-[#AE645533]">
+                <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
                   {["Uptown", "Downtown"].map((dir) => {
                     const trains = subway.arrivals.filter((a: { direction: string }) => a.direction === dir);
                     return (
-                      <div key={dir} className="bg-[#2A1F1B] p-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] mb-3">{dir === "Downtown" ? "↓ Downtown" : "↑ Uptown"}</div>
+                      <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
+                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{dir === "Downtown" ? "↓ Downtown" : "↑ Uptown"}</div>
                         <div className="space-y-2">
                           {trains.length > 0 ? trains.map((a: { line: string; minutes: number; direction: string }, i: number) => (
                             <div key={i} className="flex items-center justify-between">
                               <SubwayIcon line={a.line} size={18} />
-                              <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold" : "text-[#EF9870]"}`}>
+                              <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
                                 {a.minutes === 0 ? "NOW" : a.minutes}
                               </span>
                             </div>
@@ -772,17 +786,17 @@ export default function DashboardPage() {
               )}
             </>
           ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
+            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
           )}
         </section>
 
         {/* ── Movies (cycles: Now Showing ↔ This Year) ────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
+        <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-4">
             <div className="flex items-baseline gap-3">
-              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Now Showing</h2>
-              <button onClick={() => setQuietOnly((p) => !p)} className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                quietOnly ? "border-[#EF9870] bg-[#EF987022] text-[#EF9870]" : "border-[#AE645533] text-[#AE6455]"
+              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Now Showing</h2>
+              <button onClick={() => setQuietOnly((p) => !p)} className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all duration-200 ${
+                quietOnly ? "border-[#EF9870] bg-[#EF987015] text-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.15)]" : "border-[#AE645533] text-[#AE6455] hover:border-[#AE645566]"
               }`}>Quiet Only</button>
             </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
@@ -792,20 +806,20 @@ export default function DashboardPage() {
             return filtered.length > 0 ? (
               <CreditsCycle movies={filtered} renderLink={DashLink} />
             ) : (
-              <div className="text-[#AE6455] text-sm">Loading...</div>
+              <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
             );
           })()}
         </section>
 
         {/* ── To-Do ──────────────────────────────────────────────────── */}
         <Confetti active={showConfetti} />
-        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
+        <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-2">
             <div className="flex items-baseline gap-3">
-              <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">To-Do</h2>
-              {goalStats.startCount > 0 && (
+              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">To-Do</h2>
+              {totalStart > 0 && (
                 <span className="text-[10px] font-mono text-[#AE6455]">
-                  {Math.min(100, Math.round((goalStats.completed / goalStats.startCount) * 100))}%
+                  {Math.min(100, Math.round((totalDone / totalStart) * 100))}%
                 </span>
               )}
               {goalStats.streak > 0 && (
@@ -816,18 +830,16 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
           </div>
-          {goalStats.startCount > 0 && (
-            <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${goalStats.completed >= goalStats.startCount ? "bg-[#6CBE45]" : "bg-[#EF9870]"}`}
-                style={{ width: `${Math.min(100, (goalStats.completed / goalStats.startCount) * 100)}%` }}
-              />
-            </div>
-          )}
           {todos ? (
-            <div className="grid grid-cols-2 gap-px bg-[#AE645522] rounded overflow-hidden">
-              <div className="bg-[#2A1F1B] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Personal</div>
+            <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
+              <div className="bg-[rgba(42,31,27,0.8)] p-3">
+                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">Personal</div>
+                {goalStats.personal.start > 0 && (
+                  <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalStats.personal.done >= goalStats.personal.start ? "progress-glow-done" : "progress-glow"}`}
+                      style={{ width: `${Math.min(100, (goalStats.personal.done / goalStats.personal.start) * 100)}%` }} />
+                  </div>
+                )}
                 <ul>
                   {todos.personal?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
                     <li
@@ -838,7 +850,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => completeTodo(t.id)}
                           disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
                         >
                           {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
                         </button>
@@ -861,8 +873,14 @@ export default function DashboardPage() {
                   <button onClick={() => setAddingTo("personal")} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
                 )}
               </div>
-              <div className="bg-[#2A1F1B] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Work</div>
+              <div className="bg-[rgba(42,31,27,0.8)] p-3">
+                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">Work</div>
+                {goalStats.work.start > 0 && (
+                  <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalStats.work.done >= goalStats.work.start ? "progress-glow-done" : "progress-glow"}`}
+                      style={{ width: `${Math.min(100, (goalStats.work.done / goalStats.work.start) * 100)}%` }} />
+                  </div>
+                )}
                 <ul>
                   {todos.work?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
                     <li
@@ -873,7 +891,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => completeTodo(t.id)}
                           disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE6455] flex-shrink-0 hover:bg-[#AE645544] transition-colors flex items-center justify-center"
+                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
                         >
                           {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
                         </button>
@@ -898,14 +916,14 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="text-[#AE6455] text-sm">Loading...</div>
+            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
           )}
         </section>
 
         {/* ── Books ────────────────────────────────────────────────────── */}
-        <section className="bg-[#2A1F1B] rounded-xl p-5 border border-[#AE645533]">
+        <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-3">
-            <h2 className="text-sm font-mono uppercase tracking-widest text-[#EF9870]">Books</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Books</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {trending?.books?.length > 0 && (
@@ -921,7 +939,7 @@ export default function DashboardPage() {
                 )}
                 {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
                   <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "48px" }}>
-                    <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533]" />
+                    <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533] transition-transform duration-200 hover:scale-105" />
                     <div className="text-[8px] text-[#AE6455] text-center leading-tight mt-1.5 line-clamp-2">{b.title.charAt(0) + b.title.slice(1).toLowerCase()}</div>
                   </DashLink>
                 ))}
@@ -949,8 +967,8 @@ export default function DashboardPage() {
                 )}
                 {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
                   <DashLink key={i} href={w.link} title={w.title} source="FILM" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "44px" }}>
-                    <img src={w.poster!} alt={w.title} className={`w-11 h-[66px] rounded object-cover ${
-                      w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.5)]" : "ring-1 ring-[#AE645533]"
+                    <img src={w.poster!} alt={w.title} className={`w-11 h-[66px] rounded object-cover transition-transform duration-200 hover:scale-105 ${
+                      w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_12px_rgba(239,152,112,0.4)]" : "ring-1 ring-[#AE645533]"
                     }`} />
                     <div className={`text-[7px] text-center leading-tight mt-1 line-clamp-1 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
                   </DashLink>
@@ -969,22 +987,39 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Pomodoro Footer ────────────────────────────────────────── */}
-      <div className="mt-5 bg-[#2A1F1B] rounded-xl border border-[#AE645533] px-5 py-3 flex items-center justify-center gap-4">
-        {pomo.running ? (
-          <>
-            <span className={`text-[10px] font-mono uppercase tracking-widest ${pomo.mode === "work" ? "text-[#EF9870]" : "text-[#6CBE45]"}`}>
-              {pomo.mode === "work" ? "Focus" : pomo.mode === "long" ? "Long Break" : "Break"}
-            </span>
-            <span className={`text-2xl font-mono tabular-nums ${pomo.mode === "work" ? "text-[#F4C9AC]" : "text-[#6CBE45]"}`}>
-              {String(Math.floor(pomoRemaining / 60)).padStart(2, "0")}:{String(pomoRemaining % 60).padStart(2, "0")}
-            </span>
-            <button onClick={stopPomo} className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] hover:text-[#EF9870] transition-colors">
-              Stop
-            </button>
-            <span className="text-[10px] font-mono text-[#AE645566]">#{pomo.cycle + 1}</span>
-          </>
-        ) : (
-          <button onClick={startPomo} className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] hover:text-[#EF9870] transition-colors">
+      <div className={`mt-5 dash-card px-6 py-3.5 flex items-center justify-center gap-5 transition-all duration-500 ${
+        pomo.running ? (pomo.mode === "work" ? "border-[#EF987033]" : "border-[#6CBE4533]") : ""
+      }`} style={pomo.running ? { boxShadow: pomo.mode === "work" ? "0 0 20px rgba(239,152,112,0.06)" : "0 0 20px rgba(108,190,69,0.06)" } : {}}>
+        {pomo.running ? (() => {
+          const totalSec = pomo.mode === "work" ? 25 * 60 : pomo.mode === "long" ? 15 * 60 : 5 * 60;
+          const pct = Math.max(0, Math.min(100, ((totalSec - pomoRemaining) / totalSec) * 100));
+          return (
+            <>
+              <div className="relative w-9 h-9 flex-shrink-0">
+                <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="#1A1210" strokeWidth="2.5" />
+                  <circle cx="18" cy="18" r="15" fill="none"
+                    stroke={pomo.mode === "work" ? "#EF9870" : "#6CBE45"}
+                    strokeWidth="2.5" strokeLinecap="round"
+                    strokeDasharray={`${pct * 0.942} 100`}
+                    className="transition-all duration-1000 ease-linear"
+                  />
+                </svg>
+              </div>
+              <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${pomo.mode === "work" ? "text-[#EF9870]" : "text-[#6CBE45]"}`}>
+                {pomo.mode === "work" ? "Focus" : pomo.mode === "long" ? "Long Break" : "Break"}
+              </span>
+              <span className={`text-2xl font-mono tabular-nums tracking-wider ${pomo.mode === "work" ? "text-[#F4C9AC]" : "text-[#6CBE45]"}`}>
+                {String(Math.floor(pomoRemaining / 60)).padStart(2, "0")}:{String(pomoRemaining % 60).padStart(2, "0")}
+              </span>
+              <button onClick={stopPomo} className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] hover:text-[#EF9870] transition-colors">
+                Stop
+              </button>
+              <span className="text-[10px] font-mono text-[#AE645544]">#{pomo.cycle + 1}</span>
+            </>
+          );
+        })() : (
+          <button onClick={startPomo} className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] hover:text-[#EF9870] transition-colors py-1">
             Start Focus
           </button>
         )}
