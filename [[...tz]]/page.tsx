@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 
 const MTA_COLORS: Record<string, string> = {
   "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
@@ -93,24 +93,22 @@ type LinkRenderer = (props: { href: string; title: string; source: string; class
 
 function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink: LinkRenderer }) {
   const [px, setPx] = useState(0);
-  const count = movies.length;
-  const totalH = count * ITEM_H;
+  const totalH = movies.length * ITEM_H;
 
   useEffect(() => {
-    if (count <= VISIBLE) return;
+    if (movies.length <= VISIBLE) return;
     let raf: number;
     let last: number | null = null;
-    const speed = 0.02; // px per ms (~20px/s)
     const tick = (ts: number) => {
-      if (last !== null) setPx((p) => (p + speed * (ts - last!)) % totalH);
+      if (last !== null) setPx((p) => (p + 0.02 * (ts - last!)) % totalH);
       last = ts;
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [count, totalH]);
+  }, [movies.length, totalH]);
 
-  if (count <= VISIBLE) {
+  if (movies.length <= VISIBLE) {
     return (
       <div className="space-y-1">
         {movies.map((m) => <MovieRow key={m.id} movie={m} renderLink={renderLink} />)}
@@ -133,24 +131,6 @@ function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink:
 }
 
 function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: LinkRenderer }) {
-  const inner = (
-    <>
-      {m.poster && (
-        <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-          m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
-        }`} />
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="flex-1 h-1 bg-[#1A1210] rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.round(m.heat * 100)}%`, background: `linear-gradient(90deg, #AE6455, #EF9870)` }} />
-          </div>
-          <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
-        </div>
-      </div>
-    </>
-  );
   return (
     <div style={{ height: ITEM_H }}>
       {renderLink({
@@ -158,19 +138,32 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
         title: m.title,
         source: "MOVIE",
         className: "flex items-center gap-3 hover:bg-[#AE645511] rounded-lg px-2 transition-all duration-200 h-full group",
-        children: inner,
+        children: <>
+          {m.poster && (
+            <img src={m.poster} alt="" className={`w-8 h-12 rounded object-cover flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+              m.source === "theater" ? "ring-2 ring-[#EE352E]" : m.source === "watchlist" ? "ring-2 ring-[#4A90D9]" : ""
+            }`} />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm truncate text-[#F4C9AC]">{m.title}{m.genre && <span className="text-[#AE6455] text-xs ml-1.5">· {m.genre}</span>}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1 bg-[#1A1210] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.round(m.heat * 100)}%`, background: "linear-gradient(90deg, #AE6455, #EF9870)" }} />
+              </div>
+              <span className="text-xs text-[#AE6455] font-mono">{m.rating.toFixed(1)}</span>
+            </div>
+          </div>
+        </>,
       })}
     </div>
   );
 }
 
 function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
-  const bg = MTA_COLORS[line] ?? "#555";
-  const isYellow = ["N", "Q", "R", "W"].includes(line);
   return (
     <span
-      style={{ width: size, height: size, backgroundColor: bg, fontSize: size * 0.55 }}
-      className={`inline-flex items-center justify-center rounded-full font-bold leading-none ${isYellow ? "text-black" : "text-white"}`}
+      style={{ width: size, height: size, backgroundColor: MTA_COLORS[line] ?? "#555", fontSize: size * 0.55 }}
+      className={`inline-flex items-center justify-center rounded-full font-bold leading-none ${"NQRW".includes(line) ? "text-black" : "text-white"}`}
     >
       {line}
     </span>
@@ -180,8 +173,7 @@ function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
 // WMO weather code → Font Awesome SVG icon (free set)
 function WeatherIcon({ code, size = 24 }: { code?: number; size?: number }) {
   if (code == null) return null;
-  const s = size;
-  const props = { width: s, height: s, viewBox: "0 0 512 512", fill: "currentColor" };
+  const props = { width: size, height: size, viewBox: "0 0 512 512", fill: "currentColor" };
 
   // Sun: clear (0), mostly clear (1)
   if (code <= 1) return (
@@ -307,16 +299,11 @@ const TZ_MAP: Record<string, { label: string; tz: string }> = {
 
 function resolveTimezones(slug?: string): { label: string; tz: string }[] {
   if (!slug) return BASE_TIMEZONES;
-  const key = slug.toUpperCase();
-  const mapped = TZ_MAP[key];
-  if (mapped) {
-    return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], mapped];
-  }
-  // Try as raw IANA timezone (e.g., "Asia/Tokyo")
+  const match = TZ_MAP[slug.toUpperCase()];
+  if (match) return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], match];
   try {
     Intl.DateTimeFormat(undefined, { timeZone: slug });
-    const label = slug.split("/").pop()?.replace(/_/g, " ").slice(0, 5).toUpperCase() ?? key;
-    return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], { label, tz: slug }];
+    return [BASE_TIMEZONES[0], BASE_TIMEZONES[1], { label: slug.split("/").pop()?.replace(/_/g, " ").slice(0, 5).toUpperCase() ?? slug, tz: slug }];
   } catch {
     return BASE_TIMEZONES;
   }
@@ -332,13 +319,13 @@ export default function DashboardPage() {
   const [shared, setShared] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<"personal" | "work" | null>(null);
   const [newTodoText, setNewTodoText] = useState("");
+  const [pendingTodos, setPendingTodos] = useState<{ id: string; text: string; list: "personal" | "work" }[]>([]);
   const [pomo, setPomo] = useState<{ running: boolean; endAt: number; mode: "work" | "break" | "long"; cycle: number }>({ running: false, endAt: 0, mode: "work", cycle: 0 });
   const [pomoRemaining, setPomoRemaining] = useState(0);
   const [goalStats, setGoalStats] = useState<{ date: string; personal: { start: number; done: number }; work: { start: number; done: number }; streak: number }>({ date: "", personal: { start: 0, done: 0 }, work: { start: 0, done: 0 }, streak: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [pomoFlash, setPomoFlash] = useState(false);
   const [seconds, setSeconds] = useState(0);
-  const { mutate } = useSWRConfig();
   const isPi = useIsPi();
 
   useEffect(() => setMounted(true), []);
@@ -388,7 +375,6 @@ export default function DashboardPage() {
   const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, swr(3600_000));
   const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, swr(3600_000));
   const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, swr(3600_000));
-  const { data: booksToRead } = useSWR("/dashboard/api/goodreads?shelf=to-read", fetcher, swr(3600_000));
   const { data: weather } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
   const { data: subway } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
   const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
@@ -427,6 +413,16 @@ export default function DashboardPage() {
     }
     return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
   };
+
+  // Clear pending todos once they appear in the SWR data (Notion indexed them)
+  useEffect(() => {
+    if (!todos || pendingTodos.length === 0) return;
+    const allTexts = new Set([
+      ...(todos.personal ?? []).map((t: { text: string }) => t.text),
+      ...(todos.work ?? []).map((t: { text: string }) => t.text),
+    ]);
+    setPendingTodos((prev) => prev.filter((p) => !allTexts.has(p.text)));
+  }, [todos]);
 
   // Goal tracking: load from localStorage on mount + when todos first arrive
   useEffect(() => {
@@ -477,17 +473,10 @@ export default function DashboardPage() {
     if (!text) return;
     setNewTodoText("");
     setAddingTo(null);
-    // Optimistically add to local cache
     const tempId = `temp-${Date.now()}`;
-    mutate("/dashboard/api/todo", (current: { personal?: { id: string; text: string }[]; work?: { id: string; text: string }[]; updatedAt?: string } | undefined) => {
-      if (!current) return current;
-      const item = { id: tempId, text };
-      return {
-        ...current,
-        [list]: [...(current[list] ?? []), item],
-      };
-    }, { revalidate: false });
-    // Create in Notion — no revalidation, the optimistic item stays until next SWR refresh
+    // Optimistically add to local pending list (survives SWR re-fetches)
+    setPendingTodos((prev) => [...prev, { id: tempId, text, list }]);
+    // Create in Notion — fire and forget
     fetch("/dashboard/api/todo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -515,12 +504,6 @@ export default function DashboardPage() {
     }, 400);
   };
 
-  const now = new Date().toISOString();
-
-  // Time-of-day greeting
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-
   return (
     <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10 relative">
       {/* Subtle radial glow behind content */}
@@ -529,7 +512,6 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
         <div className="min-w-0">
-          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#AE6455] mb-1">{mounted ? greeting : "\u00A0"}</p>
           <h1 className="text-3xl md:text-4xl font-light tracking-tight font-mono bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</h1>
           <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
@@ -932,6 +914,14 @@ export default function DashboardPage() {
                       </div>
                     </li>
                   ))}
+                  {pendingTodos.filter((p) => p.list === "personal").map((p) => (
+                    <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
+                      <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
+                        <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
+                        <span>{p.text}</span>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
                 {addingTo === "personal" ? (
                   <input
@@ -970,6 +960,14 @@ export default function DashboardPage() {
                           {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
                         </button>
                         <span>{t.text}</span>
+                      </div>
+                    </li>
+                  ))}
+                  {pendingTodos.filter((p) => p.list === "work").map((p) => (
+                    <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
+                      <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
+                        <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
+                        <span>{p.text}</span>
                       </div>
                     </li>
                   ))}
