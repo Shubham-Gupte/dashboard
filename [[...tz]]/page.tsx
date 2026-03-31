@@ -428,33 +428,30 @@ export default function DashboardPage() {
     return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
   };
 
-  // Goal tracking: sync with localStorage on todo load (per-list)
-  const dismissedSize = dismissed.size;
+  // Goal tracking: load from localStorage on mount + when todos first arrive
   useEffect(() => {
     if (!todos) return;
     const today = new Date().toISOString().slice(0, 10);
     const stored = JSON.parse(localStorage.getItem("todoGoal") ?? "{}");
-    const pNow = (todos.personal?.length ?? 0);
-    const wNow = (todos.work?.length ?? 0);
-    // Count dismissed per list
-    const pDismissed = todos.personal?.filter((t: { id: string }) => dismissed.has(t.id)).length ?? 0;
-    const wDismissed = todos.work?.filter((t: { id: string }) => dismissed.has(t.id)).length ?? 0;
 
-    let next;
     if (stored.date === today) {
-      next = { ...stored, personal: { start: stored.personal?.start ?? pNow + pDismissed, done: pDismissed }, work: { start: stored.work?.start ?? wNow + wDismissed, done: wDismissed } };
+      // Resume today's stats from storage — done counts are persistent, not derived
+      if (JSON.stringify(stored) !== JSON.stringify(goalStats)) {
+        setGoalStats(stored);
+      }
     } else {
+      // New day: snapshot current todo counts, carry streak
+      const pNow = (todos.personal?.length ?? 0);
+      const wNow = (todos.work?.length ?? 0);
       const totalStart = (stored.personal?.start ?? 0) + (stored.work?.start ?? 0);
       const totalDone = (stored.personal?.done ?? 0) + (stored.work?.done ?? 0);
       const prevComplete = stored.date ? totalDone >= totalStart && totalStart > 0 : false;
       const streak = prevComplete ? (stored.streak ?? 0) + 1 : stored.date ? 0 : (stored.streak ?? 0);
-      next = { date: today, personal: { start: pNow, done: 0 }, work: { start: wNow, done: 0 }, streak };
-    }
-    if (JSON.stringify(next) !== JSON.stringify(goalStats)) {
+      const next = { date: today, personal: { start: pNow, done: 0 }, work: { start: wNow, done: 0 }, streak };
       setGoalStats(next);
       localStorage.setItem("todoGoal", JSON.stringify(next));
     }
-  }, [todos, dismissedSize]);
+  }, [todos]);
 
   // Trigger confetti when hitting 100%
   const totalStart = goalStats.personal.start + goalStats.work.start;
@@ -498,7 +495,7 @@ export default function DashboardPage() {
     });
   };
 
-  const completeTodo = async (blockId: string) => {
+  const completeTodo = async (blockId: string, list: "personal" | "work") => {
     setCompleting((prev) => new Set(prev).add(blockId));
     fetch("/dashboard/api/todo", {
       method: "PATCH",
@@ -509,6 +506,12 @@ export default function DashboardPage() {
     setTimeout(() => {
       setDismissed((prev) => new Set(prev).add(blockId));
       setCompleting((prev) => { const next = new Set(prev); next.delete(blockId); return next; });
+      // Persist incremented done count to localStorage
+      setGoalStats((prev) => {
+        const next = { ...prev, [list]: { ...prev[list], done: prev[list].done + 1 } };
+        localStorage.setItem("todoGoal", JSON.stringify(next));
+        return next;
+      });
     }, 400);
   };
 
@@ -524,16 +527,16 @@ export default function DashboardPage() {
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
-      <header className="mb-6 flex items-start justify-between relative">
-        <div>
+      <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
+        <div className="min-w-0">
           <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#AE6455] mb-1">{mounted ? greeting : "\u00A0"}</p>
-          <h1 className="text-4xl font-light tracking-tight font-mono bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</h1>
-          <p className="text-[#AE6455] text-sm mt-2 font-mono">
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight font-mono bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
-            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60">— {funFact.fact}</span>}
+            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
           </p>
         </div>
-        <div className="flex flex-col items-end font-mono">
+        <div className="flex flex-col items-start md:items-end font-mono flex-shrink-0">
           <div className="flex gap-6 items-baseline">
             {TIMEZONES.map((tz) => (
               <div key={tz.label} className="text-right">
@@ -919,7 +922,7 @@ export default function DashboardPage() {
                     >
                       <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
                         <button
-                          onClick={() => completeTodo(t.id)}
+                          onClick={() => completeTodo(t.id, "personal")}
                           disabled={completing.has(t.id)}
                           className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
                         >
@@ -960,7 +963,7 @@ export default function DashboardPage() {
                     >
                       <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
                         <button
-                          onClick={() => completeTodo(t.id)}
+                          onClick={() => completeTodo(t.id, "work")}
                           disabled={completing.has(t.id)}
                           className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
                         >
