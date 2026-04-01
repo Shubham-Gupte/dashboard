@@ -7,6 +7,17 @@ const stations: StationData[] = stationsData.stations;
 const lineStyles: Record<string, { color: string; textColor: string }> = stationsData.lines;
 const directionLabels: Record<string, string> = stationsData.directions;
 
+// Crosstown lines run east-west; N/S stop suffixes map to different directions
+const CROSSTOWN = new Set(["L", "7", "7X", "GS", "FS"]);
+// Per-line direction overrides: stopId suffix → label
+const CROSSTOWN_DIRS: Record<string, Record<string, string>> = {
+  L:  { N: "8 Av", S: "Canarsie" },
+  "7":  { N: "Flushing", S: "34 St-Hudson Yards" },
+  "7X": { N: "Flushing", S: "34 St-Hudson Yards" },
+  GS: { N: "Times Sq", S: "Grand Central" },
+  FS: { N: "Prospect Park", S: "Franklin Av" },
+};
+
 // MTA GTFS-RT feed URLs grouped by line
 const FEED_URL: Record<string, string> = {
   "1": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
@@ -163,10 +174,14 @@ async function fetchArrivals(station: StationData, lines: string[]): Promise<{ a
         if (mins < 0 || mins > 60) continue;
 
         const dirSuffix = stu.stopId.slice(-1);
+        const routeId = tu.trip.routeId;
+        const direction = CROSSTOWN_DIRS[routeId]?.[dirSuffix]
+          ?? directionLabels[dirSuffix]
+          ?? dirSuffix;
         arrivals.push({
-          line: tu.trip.routeId,
+          line: routeId,
           minutes: mins,
-          direction: directionLabels[dirSuffix] ?? dirSuffix,
+          direction,
           directionId: dirSuffix,
         });
       }
@@ -222,10 +237,20 @@ function buildResponse(station: StationData, lines: string[], arrivals: TransitA
     if (lineStyles[l]) stationLineStyles[l] = lineStyles[l];
   }
 
-  // Derive direction labels from the arrivals present
-  const dirSet = new Set(arrivals.map((a) => a.direction));
+  // Split lines into N/S vs crosstown
+  const ctLines = lines.filter((l) => CROSSTOWN.has(l));
+  const nsLines = lines.filter((l) => !CROSSTOWN.has(l));
+
+  // Derive N/S direction labels from non-crosstown arrivals
+  const nsArrivals = arrivals.filter((a) => !CROSSTOWN.has(a.line));
+  const dirSet = new Set(nsArrivals.map((a) => a.direction));
   const directions = Object.values(directionLabels).filter((d) => dirSet.has(d));
-  if (directions.length === 0) directions.push(...Object.values(directionLabels));
+  if (directions.length === 0 && nsLines.length > 0) directions.push(...Object.values(directionLabels));
+
+  // Derive crosstown direction labels from crosstown arrivals
+  const ctArrivals = arrivals.filter((a) => CROSSTOWN.has(a.line));
+  const ctDirSet = new Set(ctArrivals.map((a) => a.direction));
+  const crosstownDirections = [...ctDirSet].sort();
 
   return {
     station: station.name,
@@ -233,6 +258,8 @@ function buildResponse(station: StationData, lines: string[], arrivals: TransitA
     lines,
     lineStyles: stationLineStyles,
     directions,
+    crosstownLines: ctLines,
+    crosstownDirections,
     arrivals,
     alerts,
     updatedAt: new Date().toISOString(),

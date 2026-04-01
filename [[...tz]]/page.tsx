@@ -851,28 +851,65 @@ export default function DashboardPage() {
           ) : subway ? (
             <>
               {subway.arrivals?.length > 0 ? (
-                <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
-                  {(subway.directions as string[] ?? ["Uptown", "Downtown"]).map((dir: string, di: number) => {
-                    const trains = subway.arrivals.filter((a: { direction: string }) => a.direction === dir);
-                    return (
-                      <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
-                        <div className="space-y-2">
-                          {trains.length > 0 ? trains.map((a: { line: string; minutes: number; direction: string }, i: number) => (
-                            <div key={i} className="flex items-center justify-between">
-                              <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
-                              <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
-                                {a.minutes === 0 ? "NOW" : a.minutes}
-                              </span>
+                <>
+                  {/* Uptown / Downtown */}
+                  {(subway.directions as string[])?.length > 0 && (
+                    <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
+                      {(subway.directions as string[]).map((dir: string, di: number) => {
+                        const ctSet = new Set(subway.crosstownLines ?? []);
+                        const trains = subway.arrivals.filter((a: { line: string; direction: string }) => a.direction === dir && !ctSet.has(a.line));
+                        return (
+                          <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
+                            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
+                            <div className="space-y-2">
+                              {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
+                                  <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
+                                    {a.minutes === 0 ? "NOW" : a.minutes}
+                                  </span>
+                                </div>
+                              )) : (
+                                <div className="text-xs text-[#AE645566] font-mono">—</div>
+                              )}
                             </div>
-                          )) : (
-                            <div className="text-xs text-[#AE645566] font-mono">—</div>
-                          )}
-                        </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Crosstown */}
+                  {(subway.crosstownLines as string[])?.length > 0 && (() => {
+                    const ctSet = new Set(subway.crosstownLines as string[]);
+                    const ctTrains = subway.arrivals.filter((a: { line: string }) => ctSet.has(a.line));
+                    if (ctTrains.length === 0) return null;
+                    const ctDirs = (subway.crosstownDirections as string[]) ?? [];
+                    return (
+                      <div className={`grid gap-px rounded-lg overflow-hidden ${ctDirs.length >= 2 ? "grid-cols-2" : "grid-cols-1"} mt-px`} style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
+                        {ctDirs.map((dir: string) => {
+                          const trains = ctTrains.filter((a: { direction: string }) => a.direction === dir);
+                          return (
+                            <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
+                              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">→ {dir}</div>
+                              <div className="space-y-2">
+                                {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
+                                  <div key={i} className="flex items-center justify-between">
+                                    <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
+                                    <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
+                                      {a.minutes === 0 ? "NOW" : a.minutes}
+                                    </span>
+                                  </div>
+                                )) : (
+                                  <div className="text-xs text-[#AE645566] font-mono">—</div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
-                  })}
-                </div>
+                  })()}
+                </>
               ) : (
                 <p className="text-xs text-[#AE6455] font-mono">{subway.message ?? "No arrivals"}</p>
               )}

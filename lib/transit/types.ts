@@ -22,6 +22,8 @@ export interface TransitResponse {
   lines: string[];
   lineStyles: Record<string, LineStyle>;
   directions: string[];
+  crosstownLines: string[];       // lines that run east-west (separate UI section)
+  crosstownDirections: string[];  // e.g. ["Westbound", "Eastbound"]
   arrivals: TransitArrival[];
   alerts: TransitAlert[];
   updatedAt: string;
