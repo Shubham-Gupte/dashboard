@@ -1,2 +1,3 @@
 // Re-export from new transit route — keeps /api/subway working
-export { GET, dynamic } from "../transit/route";
+export const dynamic = "force-dynamic";
+export { GET } from "../transit/route";
