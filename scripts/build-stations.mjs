@@ -18,16 +18,35 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const gtfsDir = process.argv.find((a) => a.startsWith("--gtfs-dir="))?.split("=")[1] ?? "/tmp/mta_gtfs";
 
+function splitCSVRow(line) {
+  const fields = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      fields.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 function parseCSV(file) {
   const lines = readFileSync(join(gtfsDir, file), "utf8").split("\n");
-  const header = lines[0].split(",");
+  const header = splitCSVRow(lines[0]);
   return lines
     .slice(1)
     .filter((l) => l.trim())
     .map((line) => {
-      const vals = line.split(",");
+      const vals = splitCSVRow(line);
       const row = {};
-      for (let i = 0; i < header.length; i++) row[header[i].trim()] = vals[i]?.trim() ?? "";
+      for (let i = 0; i < header.length; i++) row[header[i]] = vals[i] ?? "";
       return row;
     });
 }
