@@ -247,8 +247,7 @@ function timeAgo(iso: string | undefined): string {
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ago`;
+  return `${Math.floor(mins / 60)}h ago`;
 }
 
 function formatTime(dateStr: string, tz: string): string {
@@ -258,6 +257,16 @@ function formatTime(dateStr: string, tz: string): string {
     timeZone: tz,
     hour12: true,
   }).format(new Date(dateStr));
+}
+
+function formatDuration(minutes: number): string {
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return hrs > 0 ? (mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`) : `${mins}m`;
+}
+
+function Skeleton() {
+  return <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>;
 }
 
 // ── Timezones (client-side only, no API) ──────────────────────────────
@@ -307,6 +316,68 @@ function resolveTimezones(slug?: string): { label: string; tz: string }[] {
   } catch {
     return BASE_TIMEZONES;
   }
+}
+
+function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismissed, completing, addingTo, newTodoText, onComplete, onSetAdding, onSetText, onAdd }: {
+  label: string; list: "personal" | "work";
+  items: { id: string; text: string }[] | undefined;
+  pending: { id: string; text: string; list: "personal" | "work" }[];
+  goalStart: number; goalDone: number;
+  dismissed: Set<string>; completing: Set<string>;
+  addingTo: "personal" | "work" | null; newTodoText: string;
+  onComplete: (id: string, list: "personal" | "work") => void;
+  onSetAdding: (list: "personal" | "work" | null) => void;
+  onSetText: (text: string) => void;
+  onAdd: (list: "personal" | "work") => void;
+}) {
+  return (
+    <div className="bg-[rgba(42,31,27,0.8)] p-3">
+      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">{label}</div>
+      {goalStart > 0 && (
+        <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
+          <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalDone >= goalStart ? "progress-glow-done" : "progress-glow"}`}
+            style={{ width: `${Math.min(100, (goalDone / goalStart) * 100)}%` }} />
+        </div>
+      )}
+      <ul>
+        {items?.filter((t) => !dismissed.has(t.id)).map((t) => (
+          <li key={t.id} className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}>
+            <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
+              <button
+                onClick={() => onComplete(t.id, list)}
+                disabled={completing.has(t.id)}
+                className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
+              >
+                {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
+              </button>
+              <span>{t.text}</span>
+            </div>
+          </li>
+        ))}
+        {pending.filter((p) => p.list === list).map((p) => (
+          <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
+            <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
+              <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
+              <span>{p.text}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {addingTo === list ? (
+        <input
+          autoFocus
+          value={newTodoText}
+          onChange={(e) => onSetText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") onAdd(list); if (e.key === "Escape") { onSetAdding(null); onSetText(""); } }}
+          onBlur={() => setTimeout(() => { onSetAdding(null); onSetText(""); }, 150)}
+          className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
+          placeholder="Add todo..."
+        />
+      ) : (
+        <button onClick={() => onSetAdding(list)} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
+      )}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -556,39 +627,21 @@ export default function DashboardPage() {
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#EF9870]">News</span>
             </div>
             <div className="overflow-hidden flex-1 py-2 ticker-mask">
-              <div className="animate-ticker flex whitespace-nowrap">
-                {[...news.stories, ...news.stories].map((s: { title: string; url: string; source: string }, i: number) => {
-                  const isShared = shared.has(s.url);
-                  const badge = (
+              <div className="animate-ticker-fast md:animate-ticker flex whitespace-nowrap">
+                {[...news.stories, ...news.stories].map((s: { title: string; url: string; source: string }, i: number) => (
+                  <DashLink
+                    key={i}
+                    href={s.url}
+                    title={s.title}
+                    source={s.source}
+                    className="inline-flex items-center mx-6 text-xs hover:opacity-70 transition-opacity"
+                  >
                     <span className={`font-mono text-[10px] mr-2 px-1.5 py-0.5 rounded ${
                       s.source === "HN" ? "bg-[#FF660022] text-[#FF6600]" : s.source === "MKT" ? "bg-[#6CBE4522] text-[#6CBE45]" : "bg-[#AE645522] text-[#EF9870]"
-                    }`}>{isShared ? "✓" : s.source}</span>
-                  );
-                  if (isPi) {
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => shareToDiscord(s.title, s.url, s.source)}
-                        className={`inline-flex items-center mx-6 text-xs transition-opacity ${isShared ? "opacity-40" : "hover:opacity-70 cursor-pointer"}`}
-                      >
-                        {badge}
-                        <span className="text-[#F4C9AC]">{s.title}</span>
-                      </button>
-                    );
-                  }
-                  return (
-                    <a
-                      key={i}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center mx-6 text-xs hover:opacity-70 transition-opacity"
-                    >
-                      {badge}
-                      <span className="text-[#F4C9AC]">{s.title}</span>
-                    </a>
-                  );
-                })}
+                    }`}>{shared.has(s.url) ? "✓" : s.source}</span>
+                    <span className="text-[#F4C9AC]">{s.title}</span>
+                  </DashLink>
+                ))}
               </div>
             </div>
           </div>
@@ -652,7 +705,7 @@ export default function DashboardPage() {
               )}
             </>
           ) : (
-            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
+            <Skeleton />
           )}
         </section>
 
@@ -715,24 +768,18 @@ export default function DashboardPage() {
                   <div className="space-y-1">
                     {rows.map((row, i) => {
                       if (row.type === "free-now") {
-                        const hrs = Math.floor(row.duration! / 60);
-                        const mins = row.duration! % 60;
-                        const label = hrs > 0 ? (mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`) : `${mins}m`;
                         return (
                           <div key={i} className="flex items-center gap-2.5 py-2 px-3 bg-[#6CBE4508] rounded-lg border border-[#6CBE4520]">
                             <span className="w-2 h-2 rounded-full bg-[#6CBE45] animate-pulse flex-shrink-0 shadow-[0_0_6px_rgba(108,190,69,0.5)]" />
-                            <span className="text-xs font-mono text-[#6CBE45]">Free for {label}</span>
+                            <span className="text-xs font-mono text-[#6CBE45]">Free for {formatDuration(row.duration!)}</span>
                           </div>
                         );
                       }
                       if (row.type === "free") {
-                        const hrs = Math.floor(row.duration! / 60);
-                        const mins = row.duration! % 60;
-                        const label = hrs > 0 ? (mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`) : `${mins}m`;
                         return (
                           <div key={i} className="flex items-center gap-2 py-1 px-2">
                             <div className="flex-1 border-t border-dashed border-[#AE645533]" />
-                            <span className="text-[10px] font-mono text-[#6CBE45] whitespace-nowrap">{label} free</span>
+                            <span className="text-[10px] font-mono text-[#6CBE45] whitespace-nowrap">{formatDuration(row.duration!)} free</span>
                             <div className="flex-1 border-t border-dashed border-[#AE645533]" />
                           </div>
                         );
@@ -764,7 +811,7 @@ export default function DashboardPage() {
               <p className="text-[#AE6455] text-sm">No events today</p>
             )
           ) : (
-            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
+            <Skeleton />
           )}
         </section>
 
@@ -842,7 +889,7 @@ export default function DashboardPage() {
               )}
             </>
           ) : (
-            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
+            <Skeleton />
           )}
         </section>
 
@@ -862,7 +909,7 @@ export default function DashboardPage() {
             return filtered.length > 0 ? (
               <CreditsCycle movies={filtered} renderLink={DashLink} />
             ) : (
-              <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
+              <Skeleton />
             );
           })()}
         </section>
@@ -888,107 +935,28 @@ export default function DashboardPage() {
           </div>
           {todos ? (
             <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
-              <div className="bg-[rgba(42,31,27,0.8)] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">Personal</div>
-                {goalStats.personal.start > 0 && (
-                  <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
-                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalStats.personal.done >= goalStats.personal.start ? "progress-glow-done" : "progress-glow"}`}
-                      style={{ width: `${Math.min(100, (goalStats.personal.done / goalStats.personal.start) * 100)}%` }} />
-                  </div>
-                )}
-                <ul>
-                  {todos.personal?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
-                    <li
-                      key={t.id}
-                      className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
-                    >
-                      <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
-                        <button
-                          onClick={() => completeTodo(t.id, "personal")}
-                          disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
-                        >
-                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                        </button>
-                        <span>{t.text}</span>
-                      </div>
-                    </li>
-                  ))}
-                  {pendingTodos.filter((p) => p.list === "personal").map((p) => (
-                    <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
-                      <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
-                        <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
-                        <span>{p.text}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {addingTo === "personal" ? (
-                  <input
-                    autoFocus
-                    value={newTodoText}
-                    onChange={(e) => setNewTodoText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") addTodo("personal"); if (e.key === "Escape") { setAddingTo(null); setNewTodoText(""); } }}
-                    onBlur={() => setTimeout(() => { setAddingTo(null); setNewTodoText(""); }, 150)}
-                    className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
-                    placeholder="Add todo..."
-                  />
-                ) : (
-                  <button onClick={() => setAddingTo("personal")} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
-                )}
-              </div>
-              <div className="bg-[rgba(42,31,27,0.8)] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">Work</div>
-                {goalStats.work.start > 0 && (
-                  <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
-                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalStats.work.done >= goalStats.work.start ? "progress-glow-done" : "progress-glow"}`}
-                      style={{ width: `${Math.min(100, (goalStats.work.done / goalStats.work.start) * 100)}%` }} />
-                  </div>
-                )}
-                <ul>
-                  {todos.work?.filter((t: { id: string }) => !dismissed.has(t.id)).map((t: { id: string; text: string }) => (
-                    <li
-                      key={t.id}
-                      className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}
-                    >
-                      <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
-                        <button
-                          onClick={() => completeTodo(t.id, "work")}
-                          disabled={completing.has(t.id)}
-                          className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645566] flex-shrink-0 hover:border-[#EF9870] hover:bg-[#EF987022] transition-all duration-200 flex items-center justify-center"
-                        >
-                          {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
-                        </button>
-                        <span>{t.text}</span>
-                      </div>
-                    </li>
-                  ))}
-                  {pendingTodos.filter((p) => p.list === "work").map((p) => (
-                    <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
-                      <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
-                        <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
-                        <span>{p.text}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {addingTo === "work" ? (
-                  <input
-                    autoFocus
-                    value={newTodoText}
-                    onChange={(e) => setNewTodoText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") addTodo("work"); if (e.key === "Escape") { setAddingTo(null); setNewTodoText(""); } }}
-                    onBlur={() => setTimeout(() => { setAddingTo(null); setNewTodoText(""); }, 150)}
-                    className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
-                    placeholder="Add todo..."
-                  />
-                ) : (
-                  <button onClick={() => setAddingTo("work")} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
-                )}
-              </div>
+              {(["personal", "work"] as const).map((list) => (
+                <TodoColumn
+                  key={list}
+                  label={list === "personal" ? "Personal" : "Work"}
+                  list={list}
+                  items={todos[list]}
+                  pending={pendingTodos}
+                  goalStart={goalStats[list].start}
+                  goalDone={goalStats[list].done}
+                  dismissed={dismissed}
+                  completing={completing}
+                  addingTo={addingTo}
+                  newTodoText={newTodoText}
+                  onComplete={completeTodo}
+                  onSetAdding={setAddingTo}
+                  onSetText={setNewTodoText}
+                  onAdd={addTodo}
+                />
+              ))}
             </div>
           ) : (
-            <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>
+            <Skeleton />
           )}
         </section>
 

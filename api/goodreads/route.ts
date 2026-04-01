@@ -17,6 +17,7 @@ interface GoodreadsItem {
   average_rating: string;
   user_rating: string;
   user_read_at: string;
+  user_date_added: string;
   num_pages: string;
   link: string;
 }
@@ -40,12 +41,8 @@ export async function GET(request: Request) {
 
     if (shelf === "read") {
       const currentYear = new Date().getFullYear();
-      const booksThisYear = items.filter((item) => {
-        if (!item.user_read_at) return false;
-        return new Date(item.user_read_at).getFullYear() === currentYear;
-      });
 
-      const books = booksThisYear.map((item) => ({
+      const books = items.map((item) => ({
         title: item.title,
         author: item.author_name,
         image: item.book_image_url,
@@ -53,12 +50,21 @@ export async function GET(request: Request) {
         avgRating: parseFloat(item.average_rating),
         pages: item.num_pages ? parseInt(item.num_pages, 10) : null,
         readAt: item.user_read_at,
+        addedAt: item.user_date_added,
         link: item.link,
       }));
 
+      // user_read_at is often empty in Goodreads RSS. Fall back to
+      // user_date_added (when the book was moved to the "read" shelf),
+      // which Goodreads always populates.
+      const count = books.filter((b) => {
+        const dateStr = b.readAt || b.addedAt;
+        return dateStr && new Date(dateStr).getFullYear() === currentYear;
+      }).length;
+
       return NextResponse.json({
         books,
-        count: books.length,
+        count,
         updatedAt: new Date().toISOString(),
       });
     }
