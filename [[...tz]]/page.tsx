@@ -4,16 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 
-const MTA_COLORS: Record<string, string> = {
-  "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
-  "4": "#00933C", "5": "#00933C", "6": "#00933C",
-  "7": "#B933AD",
-  A: "#0039A6", C: "#0039A6", E: "#0039A6",
-  B: "#FF6319", D: "#FF6319", F: "#FF6319", M: "#FF6319",
-  N: "#FCCC0A", Q: "#FCCC0A", R: "#FCCC0A", W: "#FCCC0A",
-  G: "#6CBE45", L: "#A7A9AC",
-  J: "#996633", Z: "#996633",
-};
+function useGeolocation(): { lat: number; lon: number } | null {
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => {},
+      { maximumAge: 300_000, timeout: 10_000 },
+    );
+  }, []);
+  return coords;
+}
 
 type MovieItem = { id: number; title: string; genre: string | null; rating: number; heat: number; poster: string | null; source: string };
 
@@ -159,11 +160,12 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
   );
 }
 
-function SubwayIcon({ line, size = 20 }: { line: string; size?: number }) {
+function TransitIcon({ line, size = 20, lineStyles }: { line: string; size?: number; lineStyles?: Record<string, { color: string; textColor: string }> }) {
+  const style = lineStyles?.[line];
   return (
     <span
-      style={{ width: size, height: size, backgroundColor: MTA_COLORS[line] ?? "#555", fontSize: size * 0.55 }}
-      className={`inline-flex items-center justify-center rounded-full font-bold leading-none ${"NQRW".includes(line) ? "text-black" : "text-white"}`}
+      style={{ width: size, height: size, backgroundColor: style?.color ?? "#555", color: style?.textColor ?? "#fff", fontSize: size * 0.55 }}
+      className="inline-flex items-center justify-center rounded-full font-bold leading-none"
     >
       {line}
     </span>
@@ -407,6 +409,7 @@ export default function DashboardPage() {
   const [pomoFlash, setPomoFlash] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const isPi = useIsPi();
+  const geo = useGeolocation();
 
   useEffect(() => setMounted(true), []);
 
@@ -456,7 +459,8 @@ export default function DashboardPage() {
   const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, swr(3600_000));
   const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, swr(3600_000));
   const { data: weather, error: weatherErr } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
-  const { data: subway, error: subwayErr } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
+  const transitUrl = geo ? `/dashboard/api/transit?lat=${geo.lat}&lon=${geo.lon}` : "/dashboard/api/transit";
+  const { data: subway, error: subwayErr } = useSWR(transitUrl, fetcher, swr(30_000));
   const { data: calendar, error: calendarErr } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
   const { data: events } = useSWR("/dashboard/api/events", fetcher, swr(3600_000));
@@ -828,13 +832,13 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ── Subway ─────────────────────────────────────────────────── */}
+        {/* ── Transit ────────────────────────────────────────────────── */}
         <section className="dash-card p-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Subway</h2>
+              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Transit</h2>
               {subway?.lines?.map((l: string) => (
-                <SubwayIcon key={l} line={l} size={16} />
+                <TransitIcon key={l} line={l} size={16} lineStyles={subway.lineStyles} />
               ))}
             </div>
             <div className="flex items-baseline gap-2">
@@ -843,20 +847,20 @@ export default function DashboardPage() {
             </div>
           </div>
           {subwayErr && !subway ? (
-            <StaleData label="Subway" />
+            <StaleData label="Transit" />
           ) : subway ? (
             <>
               {subway.arrivals?.length > 0 ? (
                 <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
-                  {["Uptown", "Downtown"].map((dir) => {
+                  {(subway.directions as string[] ?? ["Uptown", "Downtown"]).map((dir: string, di: number) => {
                     const trains = subway.arrivals.filter((a: { direction: string }) => a.direction === dir);
                     return (
                       <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{dir === "Downtown" ? "↓ Downtown" : "↑ Uptown"}</div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
                         <div className="space-y-2">
                           {trains.length > 0 ? trains.map((a: { line: string; minutes: number; direction: string }, i: number) => (
                             <div key={i} className="flex items-center justify-between">
-                              <SubwayIcon line={a.line} size={18} />
+                              <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
                               <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
                                 {a.minutes === 0 ? "NOW" : a.minutes}
                               </span>
@@ -880,7 +884,7 @@ export default function DashboardPage() {
                       <div>
                         <div className="flex items-center gap-1 mb-0.5">
                           {a.lines.map((l: string) => (
-                            <SubwayIcon key={l} line={l} size={14} />
+                            <TransitIcon key={l} line={l} size={14} lineStyles={subway.lineStyles} />
                           ))}
                         </div>
                         <span className="text-[#EF9870]">{a.header}</span>
