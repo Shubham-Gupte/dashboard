@@ -120,7 +120,7 @@ function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink:
     <div className="relative overflow-hidden" style={{ height: VISIBLE * ITEM_H }}>
       <div className="absolute inset-x-0 top-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(42,31,27,0.95), transparent)" }} />
       <div className="absolute inset-x-0 bottom-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(42,31,27,0.95), transparent)" }} />
-      <div style={{ transform: `translateY(${-px}px)` }}>
+      <div className="gpu-scroll" style={{ transform: `translate3d(0,${-px}px,0)` }}>
         {/* Triple for seamless wrap */}
         {[0, 1, 2].map((batch) =>
           movies.map((m, i) => <MovieRow key={`${batch}-${m.id}-${i}`} movie={m} renderLink={renderLink} />)
@@ -267,6 +267,15 @@ function formatDuration(minutes: number): string {
 
 function Skeleton() {
   return <div className="space-y-3"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-3 w-1/2" /><div className="skeleton h-3 w-2/3" /></div>;
+}
+
+function StaleData({ label, updatedAt }: { label: string; updatedAt?: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-[#AE6455]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#EE352E] animate-pulse flex-shrink-0" />
+      <span>{label} unavailable{updatedAt ? ` · last update ${timeAgo(updatedAt)}` : ""}</span>
+    </div>
+  );
 }
 
 // ── Timezones (client-side only, no API) ──────────────────────────────
@@ -442,17 +451,17 @@ export default function DashboardPage() {
   // ── SWR hooks ──────────────────────────────────────────────────────
   // refreshWhenHidden keeps polling even when tab is backgrounded (TV dashboard)
   const swr = (ms: number) => ({ refreshInterval: ms, refreshWhenHidden: true });
-  const { data: movies } = useSWR("/dashboard/api/movies", fetcher, swr(6 * 3600_000));
+  const { data: movies, error: moviesErr } = useSWR("/dashboard/api/movies", fetcher, swr(6 * 3600_000));
   const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, swr(3600_000));
   const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, swr(3600_000));
   const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, swr(3600_000));
-  const { data: weather } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
-  const { data: subway } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
-  const { data: calendar } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
+  const { data: weather, error: weatherErr } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
+  const { data: subway, error: subwayErr } = useSWR("/dashboard/api/subway", fetcher, swr(30_000));
+  const { data: calendar, error: calendarErr } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
   const { data: events } = useSWR("/dashboard/api/events", fetcher, swr(3600_000));
   const { data: galleries } = useSWR("/dashboard/api/galleries", fetcher, swr(86400_000));
-  const { data: todos } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
+  const { data: todos, error: todosErr } = useSWR("/dashboard/api/todo", fetcher, swr(600_000));
   const { data: trending } = useSWR("/dashboard/api/trending-books", fetcher, swr(86400_000));
   const { data: news } = useSWR("/dashboard/api/news", fetcher, swr(900_000));
 
@@ -655,7 +664,9 @@ export default function DashboardPage() {
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
           </div>
-          {weather?.current ? (
+          {weatherErr && !weather ? (
+            <StaleData label="Weather" />
+          ) : weather?.current ? (
             <>
               <div className="flex items-start gap-4">
                 <div className="flex items-center gap-3">
@@ -715,7 +726,9 @@ export default function DashboardPage() {
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Today</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
           </div>
-          {calendar?.events ? (
+          {calendarErr && !calendar ? (
+            <StaleData label="Calendar" />
+          ) : calendar?.events ? (
             calendar.events.length > 0 ? (() => {
               const events = calendar.events as { summary: string; start: string; end: string; location?: string }[];
               const allTimed = events.filter((e) => e.start.includes("T")).sort((a, b) => a.start.localeCompare(b.start));
@@ -829,7 +842,9 @@ export default function DashboardPage() {
               <span className="text-xs text-[#AE6455]">{timeAgo(subway?.updatedAt)}</span>
             </div>
           </div>
-          {subway ? (
+          {subwayErr && !subway ? (
+            <StaleData label="Subway" />
+          ) : subway ? (
             <>
               {subway.arrivals?.length > 0 ? (
                 <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
@@ -904,7 +919,9 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(movies?.updatedAt)}</span>
           </div>
-          {(() => {
+          {moviesErr && !movies ? (
+            <StaleData label="Movies" />
+          ) : (() => {
             const filtered = movies?.movies?.filter((m: { genre: string | null }) => !quietOnly || !m.genre || !["Action", "Horror", "Thriller"].includes(m.genre)).slice(0, 8) ?? [];
             return filtered.length > 0 ? (
               <CreditsCycle movies={filtered} renderLink={DashLink} />
@@ -917,8 +934,8 @@ export default function DashboardPage() {
         {/* ── To-Do ──────────────────────────────────────────────────── */}
         <Confetti active={showConfetti} />
         <section className="dash-card p-5">
-          <div className="flex justify-between items-baseline mb-2">
-            <div className="flex items-baseline gap-3">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">To-Do</h2>
               {goalStats.streak > 0 && (
                 <span className="text-[10px] font-mono text-[#AE645588]">
@@ -926,9 +943,36 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
+            <div className="flex items-center gap-3">
+              {pomo.running ? (() => {
+                const totalSec = pomo.mode === "work" ? 25 * 60 : pomo.mode === "long" ? 15 * 60 : 5 * 60;
+                const pct = Math.max(0, Math.min(100, ((totalSec - pomoRemaining) / totalSec) * 100));
+                return (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="15" fill="none" stroke="#1A1210" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15" fill="none"
+                        stroke={pomo.mode === "work" ? "#EF9870" : "#6CBE45"}
+                        strokeWidth="3" strokeLinecap="round"
+                        strokeDasharray={`${pct * 0.942} 100`}
+                        className="transition-all duration-1000 ease-linear"
+                      />
+                    </svg>
+                    <span className={`text-xs font-mono tabular-nums ${pomo.mode === "work" ? "text-[#F4C9AC]" : "text-[#6CBE45]"}`}>
+                      {String(Math.floor(pomoRemaining / 60)).padStart(2, "0")}:{String(pomoRemaining % 60).padStart(2, "0")}
+                    </span>
+                    <button onClick={stopPomo} className="text-[10px] font-mono text-[#AE6455] hover:text-[#EF9870] transition-colors">✕</button>
+                  </div>
+                );
+              })() : (
+                <button onClick={startPomo} className="text-[10px] font-mono text-[#AE6455] hover:text-[#EF9870] transition-colors">Focus</button>
+              )}
+              <span className="text-xs text-[#AE6455]">{timeAgo(todos?.updatedAt)}</span>
+            </div>
           </div>
-          {todos ? (
+          {todosErr && !todos ? (
+            <StaleData label="To-Do" />
+          ) : todos ? (
             <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
               {(["personal", "work"] as const).map((list) => (
                 <TodoColumn
@@ -1019,45 +1063,6 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
-      </div>
-
-      {/* ── Pomodoro Footer ────────────────────────────────────────── */}
-      <div className={`mt-5 dash-card px-6 py-3.5 flex items-center justify-center gap-5 transition-all duration-500 ${
-        pomo.running ? (pomo.mode === "work" ? "border-[#EF987033]" : "border-[#6CBE4533]") : ""
-      }`} style={pomo.running ? { boxShadow: pomo.mode === "work" ? "0 0 20px rgba(239,152,112,0.06)" : "0 0 20px rgba(108,190,69,0.06)" } : {}}>
-        {pomo.running ? (() => {
-          const totalSec = pomo.mode === "work" ? 25 * 60 : pomo.mode === "long" ? 15 * 60 : 5 * 60;
-          const pct = Math.max(0, Math.min(100, ((totalSec - pomoRemaining) / totalSec) * 100));
-          return (
-            <>
-              <div className="relative w-9 h-9 flex-shrink-0">
-                <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="15" fill="none" stroke="#1A1210" strokeWidth="2.5" />
-                  <circle cx="18" cy="18" r="15" fill="none"
-                    stroke={pomo.mode === "work" ? "#EF9870" : "#6CBE45"}
-                    strokeWidth="2.5" strokeLinecap="round"
-                    strokeDasharray={`${pct * 0.942} 100`}
-                    className="transition-all duration-1000 ease-linear"
-                  />
-                </svg>
-              </div>
-              <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${pomo.mode === "work" ? "text-[#EF9870]" : "text-[#6CBE45]"}`}>
-                {pomo.mode === "work" ? "Focus" : pomo.mode === "long" ? "Long Break" : "Break"}
-              </span>
-              <span className={`text-2xl font-mono tabular-nums tracking-wider ${pomo.mode === "work" ? "text-[#F4C9AC]" : "text-[#6CBE45]"}`}>
-                {String(Math.floor(pomoRemaining / 60)).padStart(2, "0")}:{String(pomoRemaining % 60).padStart(2, "0")}
-              </span>
-              <button onClick={stopPomo} className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] hover:text-[#EF9870] transition-colors">
-                Stop
-              </button>
-              <span className="text-[10px] font-mono text-[#AE645544]">#{pomo.cycle + 1}</span>
-            </>
-          );
-        })() : (
-          <button onClick={startPomo} className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE6455] hover:text-[#EF9870] transition-colors py-1">
-            Start Focus
-          </button>
-        )}
       </div>
 
     </div>
