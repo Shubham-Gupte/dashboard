@@ -12,17 +12,13 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function findNearest(lat: number, lon: number, stations: StationData[]): StationData | null {
-  let best: StationData | null = null;
-  let bestDist = Infinity;
-  for (const s of stations) {
-    const d = haversine(lat, lon, s.lat, s.lon);
-    if (d < bestDist) {
-      bestDist = d;
-      best = s;
-    }
-  }
-  return best;
+/** Returns the nearest station plus all others within walkable radius (~300m). */
+export function findNearby(lat: number, lon: number, stations: StationData[], radiusM = 300): StationData[] {
+  const withDist = stations.map((s) => ({ s, d: haversine(lat, lon, s.lat, s.lon) }));
+  withDist.sort((a, b) => a.d - b.d);
+  if (withDist.length === 0) return [];
+  const threshold = Math.max(withDist[0].d + radiusM, radiusM);
+  return withDist.filter((x) => x.d <= threshold).map((x) => x.s);
 }
 
 export function detectProvider(lat: number, lon: number, providers: TransitProvider[]): TransitProvider | null {

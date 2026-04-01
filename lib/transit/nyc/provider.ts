@@ -1,6 +1,6 @@
 import protobuf from "protobufjs";
 import type { TransitProvider, TransitResponse, TransitArrival, StationData } from "../types";
-import { findNearest } from "../geo";
+import { findNearby } from "../geo";
 import stationsData from "./stations.json";
 
 const stations: StationData[] = stationsData.stations;
@@ -239,11 +239,35 @@ function buildResponse(station: StationData, lines: string[], arrivals: TransitA
   };
 }
 
+function mergeStations(nearby: StationData[]): StationData {
+  const allStopIds = new Set<string>();
+  const allLines = new Set<string>();
+  const names = new Set<string>();
+  for (const s of nearby) {
+    for (const sid of s.stopIds) allStopIds.add(sid);
+    for (const l of s.lines) allLines.add(l);
+    names.add(s.name);
+  }
+  // Use shortest common name, or nearest station's name
+  const name = nearby.length === 1
+    ? nearby[0].name
+    : [...names].sort((a, b) => a.length - b.length)[0];
+  return {
+    id: nearby[0].id,
+    name,
+    lat: nearby[0].lat,
+    lon: nearby[0].lon,
+    lines: [...allLines].sort(),
+    stopIds: [...allStopIds],
+  };
+}
+
 async function getArrivals(lat: number, lon: number): Promise<TransitResponse> {
-  const station = findNearest(lat, lon, stations);
-  if (!station) throw new Error("No NYC station found");
-  const { arrivals, alerts } = await fetchArrivals(station, station.lines);
-  return buildResponse(station, station.lines, arrivals, alerts);
+  const nearby = findNearby(lat, lon, stations);
+  if (nearby.length === 0) throw new Error("No NYC station found");
+  const merged = mergeStations(nearby);
+  const { arrivals, alerts } = await fetchArrivals(merged, merged.lines);
+  return buildResponse(merged, merged.lines, arrivals, alerts);
 }
 
 async function getArrivalsByConfig(stationName: string, lines: string[]): Promise<TransitResponse> {
