@@ -920,11 +920,6 @@ export default function DashboardPage() {
           <div className="flex justify-between items-baseline mb-2">
             <div className="flex items-baseline gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">To-Do</h2>
-              {totalStart > 0 && (
-                <span className="text-[10px] font-mono text-[#AE6455]">
-                  {Math.min(100, Math.round((totalDone / totalStart) * 100))}%
-                </span>
-              )}
               {goalStats.streak > 0 && (
                 <span className="text-[10px] font-mono text-[#AE645588]">
                   {goalStats.streak}{Array.from({ length: Math.min(goalStats.streak, 7) }, (_, i) => i < goalStats.streak ? "│" : "┊").join("")}
