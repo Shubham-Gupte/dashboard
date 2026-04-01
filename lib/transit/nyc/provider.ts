@@ -7,13 +7,16 @@ const stations: StationData[] = stationsData.stations;
 const lineStyles: Record<string, { color: string; textColor: string }> = stationsData.lines;
 const directionLabels: Record<string, string> = stationsData.directions;
 
+// Express variants — GTFS static uses these as route_ids but real-time feeds
+// report the base line. Merge into the base line for display / feed lookup.
+const EXPRESS_VARIANTS: Record<string, string> = { FX: "F", "6X": "6", "7X": "7" };
+
 // Crosstown lines run east-west; N/S stop suffixes map to different directions
-const CROSSTOWN = new Set(["L", "7", "7X", "GS", "FS"]);
+const CROSSTOWN = new Set(["L", "7", "GS", "FS"]);
 // Per-line direction overrides: stopId suffix → label
 const CROSSTOWN_DIRS: Record<string, Record<string, string>> = {
   L:  { N: "8 Av", S: "Canarsie" },
   "7":  { N: "Flushing", S: "34 St-Hudson Yards" },
-  "7X": { N: "Flushing", S: "34 St-Hudson Yards" },
   GS: { N: "Times Sq", S: "Grand Central" },
   FS: { N: "Prospect Park", S: "Franklin Av" },
 };
@@ -272,7 +275,7 @@ function mergeStations(nearby: StationData[]): StationData {
   const names = new Set<string>();
   for (const s of nearby) {
     for (const sid of s.stopIds) allStopIds.add(sid);
-    for (const l of s.lines) allLines.add(l);
+    for (const l of s.lines) allLines.add(EXPRESS_VARIANTS[l] ?? l);
     names.add(s.name);
   }
   // Use shortest common name, or nearest station's name
@@ -308,7 +311,8 @@ async function getArrivalsByConfig(stationName: string, lines: string[]): Promis
   for (const m of matches) {
     for (const sid of m.stopIds) allStopIds.add(sid);
     for (const l of m.lines) {
-      if (lines.includes(l)) allLines.add(l);
+      const norm = EXPRESS_VARIANTS[l] ?? l;
+      if (lines.includes(l) || lines.includes(norm)) allLines.add(norm);
     }
   }
 
