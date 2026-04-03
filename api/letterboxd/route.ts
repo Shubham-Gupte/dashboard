@@ -88,13 +88,15 @@ export async function GET(request: Request) {
     const feedUrl = `https://letterboxd.com/${config.letterboxd}/rss/`;
     const res = await fetch(feedUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
-      next: { revalidate: 3600 },
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`Letterboxd RSS: ${res.status}`);
 
     const xml = await res.text();
     const parsed = parser.parse(xml);
-    const items: LetterboxdItem[] = parsed?.rss?.channel?.item ?? [];
+    // fast-xml-parser returns an object (not array) when there's exactly one <item>
+    const rawItems = parsed?.rss?.channel?.item ?? [];
+    const items: LetterboxdItem[] = Array.isArray(rawItems) ? rawItems : [rawItems];
 
     // Diary: filter current year, compute minutes watched
     const currentYear = new Date().getFullYear();
