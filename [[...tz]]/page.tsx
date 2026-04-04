@@ -605,7 +605,7 @@ export default function DashboardPage() {
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
-      <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
+      <header className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative">
         <div className="min-w-0">
           <p className="text-[#AE6455] text-sm font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
