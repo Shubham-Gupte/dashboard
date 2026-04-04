@@ -611,7 +611,7 @@ export default function DashboardPage() {
             theme === "dark"
               ? "bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent"
               : "text-[#BB5A1A]"
-          }`}>Escape Hatch</h1>
+          }`}>Perch</h1>
           <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
             {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
