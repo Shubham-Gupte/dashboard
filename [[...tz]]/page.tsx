@@ -119,8 +119,8 @@ function CreditsCycle({ movies, renderLink }: { movies: MovieItem[]; renderLink:
 
   return (
     <div className="relative overflow-hidden" style={{ height: VISIBLE * ITEM_H }}>
-      <div className="absolute inset-x-0 top-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(42,31,27,0.95), transparent)" }} />
-      <div className="absolute inset-x-0 bottom-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(42,31,27,0.95), transparent)" }} />
+      <div className="absolute inset-x-0 top-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to bottom, var(--c-glow), transparent)" }} />
+      <div className="absolute inset-x-0 bottom-0 h-10 z-10 pointer-events-none" style={{ background: "linear-gradient(to top, var(--c-glow), transparent)" }} />
       <div className="gpu-scroll" style={{ transform: `translate3d(0,${-px}px,0)` }}>
         {/* Triple for seamless wrap */}
         {[0, 1, 2].map((batch) =>
@@ -157,6 +157,17 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
         </>,
       })}
     </div>
+  );
+}
+
+function Logo() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" className="flex-shrink-0 text-[#EF9870]">
+      <rect x="1"  y="1"  width="9" height="9" rx="2" fill="currentColor" opacity="0.95"/>
+      <rect x="12" y="1"  width="9" height="9" rx="2" fill="currentColor" opacity="0.55"/>
+      <rect x="1"  y="12" width="9" height="9" rx="2" fill="currentColor" opacity="0.55"/>
+      <rect x="12" y="12" width="9" height="9" rx="2" fill="currentColor" opacity="0.25"/>
+    </svg>
   );
 }
 
@@ -342,7 +353,7 @@ function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismisse
   onAdd: (list: "personal" | "work") => void;
 }) {
   return (
-    <div className="bg-[rgba(42,31,27,0.8)] p-3">
+    <div className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
       <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">{label}</div>
       {goalStart > 0 && (
         <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
@@ -408,10 +419,20 @@ export default function DashboardPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [pomoFlash, setPomoFlash] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const isPi = useIsPi();
   const geo = useGeolocation();
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("dash-theme") as "dark" | "light" | null;
+    if (saved) setTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("dash-theme", theme);
+  }, [theme]);
 
   // Tick seconds for the 60-dot progress line
   useEffect(() => {
@@ -589,14 +610,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1A1210] text-[#F4C9AC] p-6 md:p-10 relative">
+    <div className="min-h-screen p-6 md:p-10 relative" data-theme={theme} style={{ background: "var(--c-bg)", color: "var(--c-text)" }}>
       {/* Subtle radial glow behind content */}
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
       <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
         <div className="min-w-0">
-          <h1 className="text-3xl md:text-4xl font-light tracking-tight font-mono bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</h1>
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight font-mono flex items-center gap-3">
+            <Logo />
+            <span className="bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</span>
+          </h1>
           <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
             {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
@@ -859,7 +883,7 @@ export default function DashboardPage() {
                         const ctSet = new Set(subway.crosstownLines ?? []);
                         const trains = subway.arrivals.filter((a: { line: string; direction: string }) => a.direction === dir && !ctSet.has(a.line));
                         return (
-                          <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
+                          <div key={dir} className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
                             <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
                             <div className="space-y-2">
                               {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
@@ -889,7 +913,7 @@ export default function DashboardPage() {
                         {ctDirs.map((dir: string) => {
                           const trains = ctTrains.filter((a: { direction: string }) => a.direction === dir);
                           return (
-                            <div key={dir} className="bg-[rgba(42,31,27,0.8)] p-3">
+                            <div key={dir} className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
                               <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">→ {dir}</div>
                               <div className="space-y-2">
                                 {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
@@ -991,7 +1015,7 @@ export default function DashboardPage() {
                 return (
                   <div className="flex items-center gap-2">
                     <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15" fill="none" stroke="#1A1210" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15" fill="none" strokeWidth="3" style={{ stroke: "var(--c-bg-inner)" }} />
                       <circle cx="18" cy="18" r="15" fill="none"
                         stroke={pomo.mode === "work" ? "#EF9870" : "#6CBE45"}
                         strokeWidth="3" strokeLinecap="round"
@@ -1043,7 +1067,7 @@ export default function DashboardPage() {
         {/* ── Books ────────────────────────────────────────────────────── */}
         <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-3">
-            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Books</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Escape</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {trending?.books?.length > 0 && (
@@ -1104,6 +1128,38 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+      </div>
+
+      {/* ── Theme toolbar – peeks from bottom-right ───────────────── */}
+      <div className="fixed bottom-0 right-6 z-50 group">
+        {/* Panel – slides down from above handle on group hover */}
+        <div className="absolute bottom-full right-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 ease-out pb-px">
+          <div
+            className="backdrop-blur-md rounded-xl px-5 py-3 flex items-center gap-4 whitespace-nowrap"
+            style={{ background: "var(--c-bg-card)", border: "1px solid var(--c-border)" }}
+          >
+            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--c-muted)" }}>Theme</span>
+            <div className="flex rounded-full overflow-hidden" style={{ border: "1px solid var(--c-border)" }}>
+              <button
+                onClick={() => setTheme("dark")}
+                className={`text-[10px] font-mono px-3 py-1 transition-colors ${theme === "dark" ? "bg-[#EF9870] text-[#1A1210]" : "hover:text-[#EF9870]"}`}
+                style={theme !== "dark" ? { color: "var(--c-muted)" } : {}}
+              >dark</button>
+              <button
+                onClick={() => setTheme("light")}
+                className={`text-[10px] font-mono px-3 py-1 transition-colors ${theme === "light" ? "bg-[#EF9870] text-[#1A1210]" : "hover:text-[#EF9870]"}`}
+                style={theme !== "light" ? { color: "var(--c-muted)" } : {}}
+              >light</button>
+            </div>
+          </div>
+        </div>
+        {/* Handle strip – always visible at bottom edge */}
+        <div
+          className="w-28 h-4 rounded-t-lg flex items-center justify-center"
+          style={{ background: "var(--c-bg-inner-2)", border: "1px solid var(--c-border)", borderBottom: "none" }}
+        >
+          <div className="w-8 h-[2px] rounded-full" style={{ background: "var(--c-muted)", opacity: 0.35 }} />
+        </div>
       </div>
 
     </div>
