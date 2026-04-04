@@ -1066,7 +1066,7 @@ export default function DashboardPage() {
           </div>
           {trending?.books?.length > 0 && (
             <div>
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 {booksRead && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
                     <div className="text-[8px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">&apos;26</div>
@@ -1079,19 +1079,22 @@ export default function DashboardPage() {
                     <img src={b.cover} alt="" className="w-12 h-[58px] rounded object-cover ring-1 ring-[#AE645533] transition-transform duration-200 hover:scale-105" />
                   </DashLink>
                 ))}
+                {booksRead?.books?.[0] && (
+                  <div className="ml-auto text-[10px] text-[#AE6455] text-right leading-snug">
+                    <div>Last read</div>
+                    {booksRead.books[0].link ? (
+                      <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline line-clamp-2">{booksRead.books[0].title}</DashLink>
+                    ) : (
+                      <span className="text-[#EF9870] line-clamp-2">{booksRead.books[0].title}</span>
+                    )}
+                  </div>
+                )}
               </div>
-              {booksRead?.books?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-1.5 text-right">Last read: {booksRead.books[0].link ? (
-                  <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
-                ) : (
-                  <span className="text-[#EF9870]">{booksRead.books[0].title}</span>
-                )}</div>
-              )}
             </div>
           )}
           {(watchlist?.watchlist?.length > 0 || diary) && (
             <div className="mt-2 pt-2 border-t border-[#AE645522]">
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 {diary && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
                     <div className="text-[8px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">&apos;26</div>
@@ -1107,14 +1110,17 @@ export default function DashboardPage() {
                     }`} />
                   </DashLink>
                 ))}
+                {diary?.diary?.[0] && (
+                  <div className="ml-auto text-[10px] text-[#AE6455] text-right leading-snug">
+                    <div>Last watched</div>
+                    {diary.diary[0].link ? (
+                      <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline line-clamp-2">{diary.diary[0].title}</DashLink>
+                    ) : (
+                      <span className="text-[#EF9870] line-clamp-2">{diary.diary[0].title}</span>
+                    )}
+                  </div>
+                )}
               </div>
-              {diary?.diary?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-1.5 text-right">Last watched: {diary.diary[0].link ? (
-                  <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
-                ) : (
-                  <span className="text-[#EF9870]">{diary.diary[0].title}</span>
-                )}</div>
-              )}
             </div>
           )}
         </section>
