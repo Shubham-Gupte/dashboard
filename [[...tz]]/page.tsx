@@ -1060,13 +1060,13 @@ export default function DashboardPage() {
 
         {/* ── Books ────────────────────────────────────────────────────── */}
         <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
-          <div className="flex justify-between items-baseline mb-3">
+          <div className="flex justify-between items-baseline mb-2">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Texts &amp; Pictures</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {trending?.books?.length > 0 && (
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Bestsellers</div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Bestsellers</div>
               <div className="flex items-start gap-3">
                 {booksRead && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
@@ -1078,12 +1078,11 @@ export default function DashboardPage() {
                 {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
                   <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "48px" }}>
                     <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533] transition-transform duration-200 hover:scale-105" />
-                    <div className="text-[8px] text-[#AE6455] text-center leading-tight mt-1.5 line-clamp-2">{b.title.charAt(0) + b.title.slice(1).toLowerCase()}</div>
                   </DashLink>
                 ))}
               </div>
               {booksRead?.books?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-2">Last read: {booksRead.books[0].link ? (
+                <div className="text-[10px] text-[#AE6455] mt-1.5">Last read: {booksRead.books[0].link ? (
                   <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
                 ) : (
                   <span className="text-[#EF9870]">{booksRead.books[0].title}</span>
@@ -1092,8 +1091,8 @@ export default function DashboardPage() {
             </div>
           )}
           {(watchlist?.watchlist?.length > 0 || diary) && (
-            <div className="mt-3 pt-3 border-t border-[#AE645522]">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-3">Up Next</div>
+            <div className="mt-2 pt-2 border-t border-[#AE645522]">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Up Next</div>
               <div className="flex items-start gap-3">
                 {diary && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
@@ -1108,12 +1107,11 @@ export default function DashboardPage() {
                     <img src={w.poster!} alt={w.title} className={`w-11 h-[66px] rounded object-cover transition-transform duration-200 hover:scale-105 ${
                       w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_12px_rgba(239,152,112,0.4)]" : "ring-1 ring-[#AE645533]"
                     }`} />
-                    <div className={`text-[7px] text-center leading-tight mt-1 line-clamp-1 ${w.available ? "text-[#EF9870]" : "text-[#AE6455]"}`}>{w.title}</div>
                   </DashLink>
                 ))}
               </div>
               {diary?.diary?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-2">Last watched: {diary.diary[0].link ? (
+                <div className="text-[10px] text-[#AE6455] mt-1.5">Last watched: {diary.diary[0].link ? (
                   <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
                 ) : (
                   <span className="text-[#EF9870]">{diary.diary[0].title}</span>
