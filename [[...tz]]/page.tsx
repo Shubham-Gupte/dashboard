@@ -1081,7 +1081,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               {booksRead?.books?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-1.5">Last read: {booksRead.books[0].link ? (
+                <div className="text-[10px] text-[#AE6455] mt-1.5 text-right">Last read: {booksRead.books[0].link ? (
                   <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
                 ) : (
                   <span className="text-[#EF9870]">{booksRead.books[0].title}</span>
@@ -1109,7 +1109,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               {diary?.diary?.[0] && (
-                <div className="text-[10px] text-[#AE6455] mt-1.5">Last watched: {diary.diary[0].link ? (
+                <div className="text-[10px] text-[#AE6455] mt-1.5 text-right">Last watched: {diary.diary[0].link ? (
                   <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
                 ) : (
                   <span className="text-[#EF9870]">{diary.diary[0].title}</span>
