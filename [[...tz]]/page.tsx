@@ -1071,10 +1071,10 @@ export default function DashboardPage() {
                 <span className="text-2xl font-light font-mono text-[#F4C9AC]">{booksRead?.count ?? 0}</span>
                 <span className="text-[9px] text-[#AE6455]">read &apos;26</span>
               </div>
-              <div className="grid grid-cols-2 gap-1 flex-1 min-h-0">
+              <div className="grid grid-cols-2 gap-1">
                 {trending?.books?.slice(0, 4).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
                   <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="hover:opacity-80 transition-opacity">
-                    <img src={b.cover} alt="" className="w-full h-full object-cover rounded ring-1 ring-[#AE645533]" />
+                    <img src={b.cover} alt="" className="w-full h-[56px] object-cover rounded ring-1 ring-[#AE645533]" />
                   </DashLink>
                 ))}
               </div>
@@ -1099,10 +1099,10 @@ export default function DashboardPage() {
                   <span className="text-[9px] text-[#AE6455] ml-1">· {Math.round(diary.totalMinutes / 60)} hrs</span>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-1 flex-1 min-h-0">
+              <div className="grid grid-cols-2 gap-1">
                 {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 4).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
                   <DashLink key={i} href={w.link} title={w.title} source="FILM" className="hover:opacity-80 transition-opacity">
-                    <img src={w.poster!} alt={w.title} className={`w-full h-full object-cover rounded ${
+                    <img src={w.poster!} alt={w.title} className={`w-full h-[56px] object-cover rounded ${
                       w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.4)]" : "ring-1 ring-[#AE645533]"
                     }`} />
                   </DashLink>
