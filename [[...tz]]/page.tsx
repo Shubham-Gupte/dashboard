@@ -1067,6 +1067,10 @@ export default function DashboardPage() {
           <div className="flex gap-4 flex-1 min-h-0">
             {/* Books column */}
             <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex items-baseline gap-1.5 mb-2">
+                <span className="text-2xl font-light font-mono text-[#F4C9AC]">{booksRead?.count ?? 0}</span>
+                <span className="text-[9px] text-[#AE6455]">read &apos;26</span>
+              </div>
               <div className="grid grid-cols-3 gap-1 flex-1 min-h-0">
                 {trending?.books?.slice(0, 6).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
                   <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="hover:opacity-80 transition-opacity">
@@ -1074,14 +1078,13 @@ export default function DashboardPage() {
                   </DashLink>
                 ))}
               </div>
-              <div className="mt-2 text-[10px] text-[#AE6455] flex justify-between">
-                <span><span className="text-[#F4C9AC] font-mono">{booksRead?.count ?? 0}</span> read &apos;26</span>
-                {booksRead?.books?.[0] && (
-                  booksRead.books[0].link
-                    ? <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline truncate ml-2 max-w-[60%]">{booksRead.books[0].title}</DashLink>
-                    : <span className="text-[#EF9870] truncate ml-2 max-w-[60%]">{booksRead.books[0].title}</span>
-                )}
-              </div>
+              {booksRead?.books?.[0] && (
+                <div className="mt-1.5 text-[10px] text-[#AE6455] truncate">
+                  {booksRead.books[0].link
+                    ? <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
+                    : <span className="text-[#EF9870]">{booksRead.books[0].title}</span>}
+                </div>
+              )}
             </div>
 
             {/* Divider */}
@@ -1089,6 +1092,13 @@ export default function DashboardPage() {
 
             {/* Films column */}
             <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex items-baseline gap-1.5 mb-2">
+                <span className="text-2xl font-light font-mono text-[#F4C9AC]">{diary?.filmCount ?? 0}</span>
+                <span className="text-[9px] text-[#AE6455]">seen &apos;26</span>
+                {diary?.totalMinutes && (
+                  <span className="text-[9px] text-[#AE6455] ml-1">· {Math.round(diary.totalMinutes / 60)} hrs</span>
+                )}
+              </div>
               <div className="grid grid-cols-3 gap-1 flex-1 min-h-0">
                 {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 6).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
                   <DashLink key={i} href={w.link} title={w.title} source="FILM" className="hover:opacity-80 transition-opacity">
@@ -1098,14 +1108,13 @@ export default function DashboardPage() {
                   </DashLink>
                 ))}
               </div>
-              <div className="mt-2 text-[10px] text-[#AE6455] flex justify-between">
-                <span><span className="text-[#F4C9AC] font-mono">{diary?.filmCount ?? 0}</span> seen &apos;26</span>
-                {diary?.diary?.[0] && (
-                  diary.diary[0].link
-                    ? <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline truncate ml-2 max-w-[60%]">{diary.diary[0].title}</DashLink>
-                    : <span className="text-[#EF9870] truncate ml-2 max-w-[60%]">{diary.diary[0].title}</span>
-                )}
-              </div>
+              {diary?.diary?.[0] && (
+                <div className="mt-1.5 text-[10px] text-[#AE6455] truncate">
+                  {diary.diary[0].link
+                    ? <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
+                    : <span className="text-[#EF9870]">{diary.diary[0].title}</span>}
+                </div>
+              )}
             </div>
           </div>
         </section>
