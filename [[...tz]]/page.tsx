@@ -1077,7 +1077,7 @@ export default function DashboardPage() {
                 )}
                 {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
                   <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "48px" }}>
-                    <img src={b.cover} alt="" className="w-12 h-[72px] rounded object-cover ring-1 ring-[#AE645533] transition-transform duration-200 hover:scale-105" />
+                    <img src={b.cover} alt="" className="w-12 h-[58px] rounded object-cover ring-1 ring-[#AE645533] transition-transform duration-200 hover:scale-105" />
                   </DashLink>
                 ))}
               </div>
@@ -1104,7 +1104,7 @@ export default function DashboardPage() {
                 )}
                 {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
                   <DashLink key={i} href={w.link} title={w.title} source="FILM" className="flex flex-col items-center hover:opacity-80 transition-opacity" style={{ width: "44px" }}>
-                    <img src={w.poster!} alt={w.title} className={`w-11 h-[66px] rounded object-cover transition-transform duration-200 hover:scale-105 ${
+                    <img src={w.poster!} alt={w.title} className={`w-11 h-[52px] rounded object-cover transition-transform duration-200 hover:scale-105 ${
                       w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_12px_rgba(239,152,112,0.4)]" : "ring-1 ring-[#AE645533]"
                     }`} />
                   </DashLink>
