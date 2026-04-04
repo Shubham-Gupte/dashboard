@@ -600,12 +600,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-10 relative" data-theme={theme} style={{ background: "var(--c-bg)", color: "var(--c-text)" }}>
+    <div className="h-screen overflow-hidden flex flex-col p-6 md:p-10 relative" data-theme={theme} style={{ background: "var(--c-bg)", color: "var(--c-text)" }}>
       {/* Subtle radial glow behind content */}
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
       {/* Header */}
-      <header className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative">
+      <header className="mb-4 flex-shrink-0 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative">
         <div className="min-w-0">
           <p className="text-[#AE6455] text-base font-mono">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
@@ -650,7 +650,7 @@ export default function DashboardPage() {
 
       {/* ── News Ticker ──────────────────────────────────────────────── */}
       {news?.stories?.length > 0 && (
-        <div className="mb-5 dash-card overflow-hidden">
+        <div className="mb-5 flex-shrink-0 dash-card overflow-hidden">
           <div className="flex items-center">
             <div className="bg-[#AE645520] px-4 py-2.5 flex-shrink-0 border-r border-[#AE645522]">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#EF9870]">News</span>
@@ -677,9 +677,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="dash-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 gap-5 auto-rows-min">
+      <div className="dash-grid flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 lg:grid-rows-2 gap-5">
         {/* ── Weather ────────────────────────────────────────────────── */}
-        <section className="dash-card p-5">
+        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
@@ -741,7 +741,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Calendar ───────────────────────────────────────────────── */}
-        <section className="dash-card p-6 max-h-[400px] flex flex-col">
+        <section className="dash-card p-6 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4 flex-shrink-0">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Today</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
@@ -849,7 +849,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Transit ────────────────────────────────────────────────── */}
-        <section className="dash-card p-6">
+        <section className="dash-card p-6 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Transit</h2>
@@ -966,7 +966,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Movies (cycles: Now Showing ↔ This Year) ────────────── */}
-        <section className="dash-card p-5">
+        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4">
             <div className="flex items-baseline gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Now Showing</h2>
@@ -990,8 +990,8 @@ export default function DashboardPage() {
 
         {/* ── To-Do ──────────────────────────────────────────────────── */}
         <Confetti active={showConfetti} />
-        <section className="dash-card p-5">
-          <div className="flex justify-between items-center mb-2">
+        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
+          <div className="flex justify-between items-center mb-2 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">To-Do</h2>
               {goalStats.streak > 0 && (
@@ -1030,6 +1030,7 @@ export default function DashboardPage() {
           {todosErr && !todos ? (
             <StaleData label="To-Do" />
           ) : todos ? (
+            <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
               {(["personal", "work"] as const).map((list) => (
                 <TodoColumn
@@ -1051,13 +1052,14 @@ export default function DashboardPage() {
                 />
               ))}
             </div>
+            </div>
           ) : (
             <Skeleton />
           )}
         </section>
 
         {/* ── Books ────────────────────────────────────────────────────── */}
-        <section className="dash-card p-5">
+        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-3">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Texts &amp; Pictures</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
