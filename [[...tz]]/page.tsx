@@ -1059,7 +1059,7 @@ export default function DashboardPage() {
         {/* ── Books ────────────────────────────────────────────────────── */}
         <section className="dash-card p-5">
           <div className="flex justify-between items-baseline mb-3">
-            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Escape</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Texts &amp; Pictures</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {trending?.books?.length > 0 && (
