@@ -160,16 +160,6 @@ function MovieRow({ movie: m, renderLink }: { movie: MovieItem; renderLink: Link
   );
 }
 
-function Logo() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" className="flex-shrink-0 text-[#EF9870]">
-      <rect x="1"  y="1"  width="9" height="9" rx="2" fill="currentColor" opacity="0.95"/>
-      <rect x="12" y="1"  width="9" height="9" rx="2" fill="currentColor" opacity="0.55"/>
-      <rect x="1"  y="12" width="9" height="9" rx="2" fill="currentColor" opacity="0.55"/>
-      <rect x="12" y="12" width="9" height="9" rx="2" fill="currentColor" opacity="0.25"/>
-    </svg>
-  );
-}
 
 function TransitIcon({ line, size = 20, lineStyles }: { line: string; size?: number; lineStyles?: Record<string, { color: string; textColor: string }> }) {
   const style = lineStyles?.[line];
@@ -617,10 +607,11 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
         <div className="min-w-0">
-          <h1 className="text-3xl md:text-4xl font-light tracking-tight font-mono flex items-center gap-3">
-            <Logo />
-            <span className="bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent">Dashboard</span>
-          </h1>
+          <h1 className={`text-3xl md:text-4xl font-light tracking-tight font-mono ${
+            theme === "dark"
+              ? "bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent"
+              : "text-[#BB5A1A]"
+          }`}>Dashboard</h1>
           <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
             {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
@@ -653,6 +644,12 @@ export default function DashboardPage() {
               />
             ))}
           </div>
+          <button
+            onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+            className="self-end mt-1.5 text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
+            style={{ color: "var(--c-muted)" }}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >{theme === "dark" ? "◑ light" : "◐ dark"}</button>
         </div>
       </header>
 
@@ -1130,37 +1127,6 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* ── Theme toolbar – peeks from bottom-right ───────────────── */}
-      <div className="fixed bottom-0 right-6 z-50 group">
-        {/* Panel – slides down from above handle on group hover */}
-        <div className="absolute bottom-full right-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 ease-out pb-px">
-          <div
-            className="backdrop-blur-md rounded-xl px-5 py-3 flex items-center gap-4 whitespace-nowrap"
-            style={{ background: "var(--c-bg-card)", border: "1px solid var(--c-border)" }}
-          >
-            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--c-muted)" }}>Theme</span>
-            <div className="flex rounded-full overflow-hidden" style={{ border: "1px solid var(--c-border)" }}>
-              <button
-                onClick={() => setTheme("dark")}
-                className={`text-[10px] font-mono px-3 py-1 transition-colors ${theme === "dark" ? "bg-[#EF9870] text-[#1A1210]" : "hover:text-[#EF9870]"}`}
-                style={theme !== "dark" ? { color: "var(--c-muted)" } : {}}
-              >dark</button>
-              <button
-                onClick={() => setTheme("light")}
-                className={`text-[10px] font-mono px-3 py-1 transition-colors ${theme === "light" ? "bg-[#EF9870] text-[#1A1210]" : "hover:text-[#EF9870]"}`}
-                style={theme !== "light" ? { color: "var(--c-muted)" } : {}}
-              >light</button>
-            </div>
-          </div>
-        </div>
-        {/* Handle strip – always visible at bottom edge */}
-        <div
-          className="w-28 h-4 rounded-t-lg flex items-center justify-center"
-          style={{ background: "var(--c-bg-inner-2)", border: "1px solid var(--c-border)", borderBottom: "none" }}
-        >
-          <div className="w-8 h-[2px] rounded-full" style={{ background: "var(--c-muted)", opacity: 0.35 }} />
-        </div>
-      </div>
 
     </div>
   );
