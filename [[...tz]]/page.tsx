@@ -1064,59 +1064,57 @@ export default function DashboardPage() {
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">New Texts &amp; Watchlist</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
-          <div className="flex gap-4 flex-1 min-h-0">
-            {/* Books column */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              <div className="flex items-baseline gap-1.5 mb-2">
-                <span className="text-2xl font-light font-mono text-[#F4C9AC]">{booksRead?.count ?? 0}</span>
-                <span className="text-[9px] text-[#AE6455]">read &apos;26</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                {trending?.books?.slice(0, 4).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
-                  <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="hover:opacity-80 transition-opacity">
-                    <img src={b.cover} alt="" className="w-full h-[56px] object-cover rounded ring-1 ring-[#AE645533]" />
+          {trending?.books?.length > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center gap-3">
+                {booksRead && (
+                  <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] text-center">
+                    <div className="text-[8px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">&apos;26</div>
+                    <span className="text-2xl font-light font-mono text-[#F4C9AC]">{booksRead.count ?? 0}</span>
+                    <div className="text-[9px] text-[#AE6455]">read</div>
+                  </div>
+                )}
+                {trending.books.slice(0, 5).map((b: { title: string; author: string; cover: string; rank: number; weeks: number }, i: number) => (
+                  <DashLink key={i} href={`https://www.google.com/search?q=${encodeURIComponent(b.title + " " + b.author + " book")}`} title={`${b.title} by ${b.author}`} source="BOOK" className="hover:opacity-80 transition-opacity flex-shrink-0">
+                    <img src={b.cover} alt="" className="w-10 h-[60px] object-cover rounded ring-1 ring-[#AE645533]" />
                   </DashLink>
                 ))}
               </div>
               {booksRead?.books?.[0] && (
-                <div className="mt-1.5 text-[10px] text-[#AE6455] truncate">
-                  {booksRead.books[0].link
-                    ? <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
-                    : <span className="text-[#EF9870]">{booksRead.books[0].title}</span>}
+                <div className="text-[10px] text-[#AE6455] mt-1.5 truncate">Last read: {booksRead.books[0].link
+                  ? <DashLink href={booksRead.books[0].link} title={booksRead.books[0].title} source="BOOK" className="text-[#EF9870] hover:underline">{booksRead.books[0].title}</DashLink>
+                  : <span className="text-[#EF9870]">{booksRead.books[0].title}</span>}
                 </div>
               )}
             </div>
-
-            {/* Divider */}
-            <div className="w-px bg-[#AE645522] flex-shrink-0" />
-
-            {/* Films column */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              <div className="flex items-baseline gap-1.5 mb-2">
-                <span className="text-2xl font-light font-mono text-[#F4C9AC]">{diary?.filmCount ?? 0}</span>
-                <span className="text-[9px] text-[#AE6455]">seen &apos;26</span>
-                {diary?.totalMinutes && (
-                  <span className="text-[9px] text-[#AE6455] ml-1">· {Math.round(diary.totalMinutes / 60)} hrs</span>
+          )}
+          {(watchlist?.watchlist?.length > 0 || diary) && (
+            <div className="pt-3 border-t border-[#AE645522]">
+              <div className="flex items-center gap-3">
+                {diary && (
+                  <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] text-center">
+                    <div className="text-[8px] font-mono uppercase tracking-widest text-[#AE6455] mb-1">&apos;26</div>
+                    <span className="text-2xl font-light font-mono text-[#F4C9AC]">{diary.filmCount ?? 0}</span>
+                    <div className="text-[9px] text-[#AE6455]">seen</div>
+                    <div className="text-[9px] text-[#AE6455]">{diary.totalMinutes ? Math.round(diary.totalMinutes / 60) : 0} hrs</div>
+                  </div>
                 )}
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 4).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
-                  <DashLink key={i} href={w.link} title={w.title} source="FILM" className="hover:opacity-80 transition-opacity">
-                    <img src={w.poster!} alt={w.title} className={`w-full h-[56px] object-cover rounded ${
+                {watchlist?.watchlist?.filter((w: { poster: string | null }) => w.poster).slice(0, 5).map((w: { title: string; year: string; link: string; poster: string | null; available?: boolean }, i: number) => (
+                  <DashLink key={i} href={w.link} title={w.title} source="FILM" className="hover:opacity-80 transition-opacity flex-shrink-0">
+                    <img src={w.poster!} alt={w.title} className={`w-9 h-[54px] object-cover rounded ${
                       w.available ? "ring-2 ring-[#EF9870] shadow-[0_0_8px_rgba(239,152,112,0.4)]" : "ring-1 ring-[#AE645533]"
                     }`} />
                   </DashLink>
                 ))}
               </div>
               {diary?.diary?.[0] && (
-                <div className="mt-1.5 text-[10px] text-[#AE6455] truncate">
-                  {diary.diary[0].link
-                    ? <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
-                    : <span className="text-[#EF9870]">{diary.diary[0].title}</span>}
+                <div className="text-[10px] text-[#AE6455] mt-1.5 truncate">Last watched: {diary.diary[0].link
+                  ? <DashLink href={diary.diary[0].link} title={diary.diary[0].title} source="FILM" className="text-[#EF9870] hover:underline">{diary.diary[0].title}</DashLink>
+                  : <span className="text-[#EF9870]">{diary.diary[0].title}</span>}
                 </div>
               )}
             </div>
-          </div>
+          )}
         </section>
       </div>
 
