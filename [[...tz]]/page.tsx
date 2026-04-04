@@ -607,9 +607,9 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative">
         <div className="min-w-0">
-          <p className="text-[#AE6455] text-sm font-mono truncate">
+          <p className="text-[#AE6455] text-base font-mono">
             {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
-            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
+            {funFact?.fact && funFact.fact.length <= 80 && <span className="text-sm italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
           </p>
         </div>
         <div className="flex flex-col items-start md:items-end font-mono flex-shrink-0">
