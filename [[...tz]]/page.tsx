@@ -604,54 +604,12 @@ export default function DashboardPage() {
       {/* Subtle radial glow behind content */}
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
-      {/* Header */}
-      <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 relative">
-        <div className="min-w-0">
-          <h1 className={`text-3xl md:text-4xl font-light tracking-tight font-mono ${
-            theme === "dark"
-              ? "bg-gradient-to-r from-[#F4C9AC] via-[#EF9870] to-[#F4C9AC] bg-clip-text text-transparent"
-              : "text-[#BB5A1A]"
-          }`}>Perch</h1>
-          <p className="text-[#AE6455] text-sm mt-2 font-mono truncate">
-            {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "\u00A0"}
-            {funFact?.fact && <span className="text-xs italic tracking-wide ml-3 opacity-60 hidden md:inline">— {funFact.fact}</span>}
-          </p>
-        </div>
-        <div className="flex flex-col items-start md:items-end font-mono flex-shrink-0">
-          <div className="flex gap-6 items-baseline">
-            {TIMEZONES.map((tz) => (
-              <div key={tz.label} className="text-right">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-[#AE645588]">{tz.label}</div>
-                <div className="text-lg font-light text-[#F4C9AC] tabular-nums">
-                  {mounted ? new Intl.DateTimeFormat("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    timeZone: tz.tz,
-                    hour12: true,
-                  }).format(new Date()) : "--:--"}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* 60-second dot progress */}
-          <div className="flex gap-[2px] mt-2">
-            {Array.from({ length: 60 }, (_, i) => (
-              <div
-                key={i}
-                className={`w-[3px] h-[3px] rounded-full transition-colors duration-300 ${
-                  i <= seconds ? "bg-[#EF9870]" : "bg-[#AE645533]"
-                }`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
-            className="self-end mt-1.5 text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
-            style={{ color: "var(--c-muted)" }}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >{theme === "dark" ? "◑ light" : "◐ dark"}</button>
-        </div>
-      </header>
+      <button
+        onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+        className="fixed top-4 right-6 z-40 text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
+        style={{ color: "var(--c-muted)" }}
+        title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      >{theme === "dark" ? "◑" : "◐"}</button>
 
       {/* ── News Ticker ──────────────────────────────────────────────── */}
       {news?.stories?.length > 0 && (
