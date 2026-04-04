@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Escape Hatch",
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
