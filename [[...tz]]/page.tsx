@@ -1061,12 +1061,11 @@ export default function DashboardPage() {
         {/* ── Books ────────────────────────────────────────────────────── */}
         <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-2">
-            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Texts &amp; Pictures</h2>
+            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">New Texts &amp; Watchlist</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
           </div>
           {trending?.books?.length > 0 && (
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Bestsellers</div>
               <div className="flex items-start gap-3">
                 {booksRead && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
@@ -1092,7 +1091,6 @@ export default function DashboardPage() {
           )}
           {(watchlist?.watchlist?.length > 0 || diary) && (
             <div className="mt-2 pt-2 border-t border-[#AE645522]">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AE6455] mb-2">Up Next</div>
               <div className="flex items-start gap-3">
                 {diary && (
                   <div className="flex-shrink-0 pr-2 border-r border-[#AE645522] self-center text-center">
