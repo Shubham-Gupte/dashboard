@@ -600,7 +600,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col p-6 md:p-10 relative" data-theme={theme} style={{ background: "var(--c-bg)", color: "var(--c-text)" }}>
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col p-6 md:p-10 relative" data-theme={theme} style={{ background: "var(--c-bg)", color: "var(--c-text)" }}>
       {/* Subtle radial glow behind content */}
       <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 0%, rgba(174,100,85,0.06) 0%, transparent 60%)" }} />
       {pomoFlash && <div className="fixed inset-0 bg-[#EE352E] opacity-30 z-50 pointer-events-none animate-pulse" />}
@@ -677,9 +677,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="dash-grid flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 lg:grid-rows-2 gap-5">
+      <div className="dash-grid lg:flex-1 lg:min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:portrait:grid-cols-2 lg:grid-rows-2 gap-5">
         {/* ── Weather ────────────────────────────────────────────────── */}
-        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-5 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
@@ -741,7 +741,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Calendar ───────────────────────────────────────────────── */}
-        <section className="dash-card p-6 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-6 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4 flex-shrink-0">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Today</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(calendar?.updatedAt)}</span>
@@ -849,7 +849,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Transit ────────────────────────────────────────────────── */}
-        <section className="dash-card p-6 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-6 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Transit</h2>
@@ -966,7 +966,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Movies (cycles: Now Showing ↔ This Year) ────────────── */}
-        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-5 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4">
             <div className="flex items-baseline gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Now Showing</h2>
@@ -990,7 +990,7 @@ export default function DashboardPage() {
 
         {/* ── To-Do ──────────────────────────────────────────────────── */}
         <Confetti active={showConfetti} />
-        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-5 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-center mb-2 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">To-Do</h2>
@@ -1030,7 +1030,7 @@ export default function DashboardPage() {
           {todosErr && !todos ? (
             <StaleData label="To-Do" />
           ) : todos ? (
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="lg:flex-1 lg:min-h-0 overflow-y-auto">
             <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
               {(["personal", "work"] as const).map((list) => (
                 <TodoColumn
@@ -1059,7 +1059,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Books ────────────────────────────────────────────────────── */}
-        <section className="dash-card p-5 h-full flex flex-col overflow-hidden">
+        <section className="dash-card p-5 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-2">
             <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">New Texts &amp; Watchlist</h2>
             <span className="text-xs text-[#AE6455]">{timeAgo(booksRead?.updatedAt)}</span>
