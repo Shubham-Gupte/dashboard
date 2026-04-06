@@ -330,6 +330,19 @@ function resolveTimezones(slug?: string): { label: string; tz: string }[] {
   }
 }
 
+function renderTodoText(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+         className="underline text-[#EF9870] hover:text-[#F4C9AC] transition-colors break-all"
+         onClick={(e) => e.stopPropagation()}>
+        {part}
+      </a>
+    ) : part
+  );
+}
+
 function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismissed, completing, addingTo, newTodoText, onComplete, onSetAdding, onSetText, onAdd }: {
   label: string; list: "personal" | "work";
   items: { id: string; text: string }[] | undefined;
@@ -353,7 +366,7 @@ function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismisse
       )}
       <ul>
         {items?.filter((t) => !dismissed.has(t.id)).map((t) => (
-          <li key={t.id} className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-2.5"}`}>
+          <li key={t.id} className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-40 opacity-100 mb-2.5"}`}>
             <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
               <button
                 onClick={() => onComplete(t.id, list)}
@@ -362,15 +375,15 @@ function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismisse
               >
                 {completing.has(t.id) && <span className="text-[#6CBE45] text-[10px]">✓</span>}
               </button>
-              <span>{t.text}</span>
+              <span className="break-words min-w-0">{renderTodoText(t.text)}</span>
             </div>
           </li>
         ))}
         {pending.filter((p) => p.list === list).map((p) => (
-          <li key={p.id} className="max-h-12 opacity-70 mb-2.5">
+          <li key={p.id} className="max-h-40 opacity-70 mb-2.5">
             <div className="text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed">
               <span className="mt-0.5 w-3.5 h-3.5 rounded border border-[#AE645533] flex-shrink-0" />
-              <span>{p.text}</span>
+              <span className="break-words min-w-0">{renderTodoText(p.text)}</span>
             </div>
           </li>
         ))}
