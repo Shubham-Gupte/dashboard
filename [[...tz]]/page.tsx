@@ -330,6 +330,34 @@ function resolveTimezones(slug?: string): { label: string; tz: string }[] {
   }
 }
 
+function detectFlight(events: { summary: string; start: string; location?: string }[]) {
+  const flightNumRe = /\b([A-Z]{2})\s*(\d{3,4})\b/;
+  const keywordRe = /\b(flight|departs?|arrives?|boarding|airline)\b/i;
+  const airportRe = /\b([A-Z]{3})\b/g;
+  const now = new Date();
+  for (const e of events) {
+    if (!e.start.includes("T")) continue;
+    const departure = new Date(e.start);
+    if (departure < now) continue;
+    const text = `${e.summary} ${e.location ?? ""}`;
+    const flightMatch = text.match(flightNumRe);
+    if (!flightMatch && !keywordRe.test(text)) continue;
+    const airports = [...text.matchAll(airportRe)].map((m) => m[1]).slice(0, 2);
+    const diffMs = departure.getTime() - now.getTime();
+    const diffH = Math.floor(diffMs / 3600000);
+    const diffM = Math.floor((diffMs % 3600000) / 60000);
+    const countdown = diffH > 0 ? `${diffH}h ${diffM}m` : `${diffM}m`;
+    return {
+      flightNumber: flightMatch ? `${flightMatch[1]} ${flightMatch[2]}` : null,
+      route: airports.length === 2 ? `${airports[0]} → ${airports[1]}` : airports[0] ?? null,
+      departure,
+      countdown,
+      title: e.summary,
+    };
+  }
+  return null;
+}
+
 function renderTodoText(text: string) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return parts.map((part, i) =>
@@ -626,6 +654,20 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-col items-start md:items-end font-mono flex-shrink-0">
+          {(() => {
+            const flight = calendar?.events ? detectFlight(calendar.events) : null;
+            if (!flight) return null;
+            return (
+              <div className="text-[10px] font-mono text-[#AE6455] mb-2 flex items-center gap-1.5">
+                <span>✈</span>
+                <span className="text-[#F4C9AC]">{flight.route ?? flight.flightNumber ?? flight.title}</span>
+                {flight.flightNumber && flight.route && <span className="text-[#AE645588]">·</span>}
+                {flight.flightNumber && flight.route && <span>{flight.flightNumber}</span>}
+                <span className="text-[#AE645588]">·</span>
+                <span className="text-[#EF9870]">in {flight.countdown}</span>
+              </div>
+            );
+          })()}
           <div className="flex gap-6 items-baseline">
             {TIMEZONES.map((tz) => (
               <div key={tz.label} className="text-right">
