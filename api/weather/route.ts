@@ -73,7 +73,9 @@ async function geocode(address: string): Promise<{ lat: number; lon: number }> {
 export async function GET() {
   try {
     const config = getConfig();
-    const { lat, lon } = await geocode(config.address);
+    const { lat, lon } = (config.lat != null && config.lon != null)
+      ? { lat: config.lat, lon: config.lon }
+      : await geocode(config.address);
 
     const url = new URL("https://api.open-meteo.com/v1/forecast");
     url.searchParams.set("latitude", String(lat));

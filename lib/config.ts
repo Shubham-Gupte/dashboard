@@ -2,6 +2,8 @@ import configData from "./config.json";
 
 export interface DashboardConfig {
   address: string;
+  lat?: number;
+  lon?: number;
   transitSystem?: string;
   subwayLines: string[];
   subwayStation: string;
