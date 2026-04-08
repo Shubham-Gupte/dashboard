@@ -539,6 +539,7 @@ export default function DashboardPage() {
       return (
         <button
           onClick={() => shareToDiscord(title, href, source)}
+          title={title}
           className={`${className ?? ""} ${shared.has(href) ? "opacity-40" : ""}`}
           style={style}
         >
