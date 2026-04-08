@@ -547,7 +547,7 @@ export default function DashboardPage() {
         </button>
       );
     }
-    return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
+    return <a href={href} title={title} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
   };
 
   // Clear pending todos once they appear in the SWR data (Notion indexed them)
@@ -1172,8 +1172,6 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
-
-
     </div>
   );
 }
