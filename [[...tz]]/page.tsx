@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 
 function useGeolocation(): { lat: number; lon: number } | null {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
@@ -463,7 +463,7 @@ export default function DashboardPage() {
       if (document.visibilityState === "hidden") {
         hiddenAt = Date.now();
       } else if (document.visibilityState === "visible" && hiddenAt !== null) {
-        if (Date.now() - hiddenAt > 5 * 60 * 1000) window.location.reload();
+        if (Date.now() - hiddenAt > 5 * 60 * 1000) mutate(() => true);
         hiddenAt = null;
       }
     };
