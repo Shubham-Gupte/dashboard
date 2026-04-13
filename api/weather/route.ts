@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getConfig } from "../../lib/config";
 
-export const revalidate = 1800; // 30 min ISR
+export const dynamic = "force-dynamic";
 
 interface GeoResult {
   lat: number;
@@ -70,12 +70,17 @@ async function geocode(address: string): Promise<{ lat: number; lon: number }> {
   return geoCache;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const qLat = searchParams.get("lat");
+    const qLon = searchParams.get("lon");
     const config = getConfig();
-    const { lat, lon } = (config.lat != null && config.lon != null)
-      ? { lat: config.lat, lon: config.lon }
-      : await geocode(config.address);
+    const { lat, lon } = (qLat && qLon)
+      ? { lat: parseFloat(qLat), lon: parseFloat(qLon) }
+      : (config.lat != null && config.lon != null)
+        ? { lat: config.lat, lon: config.lon }
+        : await geocode(config.address);
 
     const url = new URL("https://api.open-meteo.com/v1/forecast");
     url.searchParams.set("latitude", String(lat));
@@ -88,7 +93,7 @@ export async function GET() {
     url.searchParams.set("forecast_days", "3");
     url.searchParams.set("timezone", "auto");
 
-    const res = await fetch(url.toString(), { next: { revalidate: 1800 } });
+    const res = await fetch(url.toString(), { cache: "no-store" });
     if (!res.ok) throw new Error(`Open-Meteo: ${res.status}`);
     const data: OpenMeteoResponse = await res.json();
 

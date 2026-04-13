@@ -456,6 +456,21 @@ export default function DashboardPage() {
 
   useEffect(() => setMounted(true), []);
 
+  // Reload when foregrounded after 5+ minutes (mobile app stale data)
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+      } else if (document.visibilityState === "visible" && hiddenAt !== null) {
+        if (Date.now() - hiddenAt > 5 * 60 * 1000) window.location.reload();
+        hiddenAt = null;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   useEffect(() => {
     const saved = localStorage.getItem("dash-theme") as "dark" | "light" | null;
     if (saved) setTheme(saved);
@@ -510,7 +525,8 @@ export default function DashboardPage() {
   const { data: watchlist } = useSWR("/dashboard/api/letterboxd?type=watchlist", fetcher, swr(3600_000));
   const { data: diary } = useSWR("/dashboard/api/letterboxd?type=diary", fetcher, swr(3600_000));
   const { data: booksRead } = useSWR("/dashboard/api/goodreads?shelf=read", fetcher, swr(3600_000));
-  const { data: weather, error: weatherErr } = useSWR("/dashboard/api/weather", fetcher, swr(1800_000));
+  const weatherUrl = geo ? `/dashboard/api/weather?lat=${geo.lat}&lon=${geo.lon}` : "/dashboard/api/weather";
+  const { data: weather, error: weatherErr } = useSWR(weatherUrl, fetcher, swr(600_000));
   const transitUrl = geo ? `/dashboard/api/transit?lat=${geo.lat}&lon=${geo.lon}` : "/dashboard/api/transit";
   const { data: subway, error: subwayErr } = useSWR(transitUrl, fetcher, swr(30_000));
   const { data: calendar, error: calendarErr } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
@@ -695,12 +711,20 @@ export default function DashboardPage() {
               />
             ))}
           </div>
-          <button
-            onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
-            className="self-end mt-1.5 text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
-            style={{ color: "var(--c-muted)" }}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >{theme === "dark" ? "◑ light" : "◐ dark"}</button>
+          <div className="self-end mt-1.5 flex items-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
+              style={{ color: "var(--c-muted)" }}
+              title="Hard refresh"
+            >↻</button>
+            <button
+              onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+              className="text-[10px] font-mono tracking-widest transition-colors hover:text-[#EF9870]"
+              style={{ color: "var(--c-muted)" }}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >{theme === "dark" ? "◑ light" : "◐ dark"}</button>
+          </div>
         </div>
       </header>
 
