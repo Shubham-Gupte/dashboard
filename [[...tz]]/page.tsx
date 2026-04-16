@@ -960,7 +960,7 @@ export default function DashboardPage() {
                         return (
                           <div key={dir} className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
                             <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 pb-1">
                               {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
                                 <div key={i} className="flex items-center justify-between">
                                   <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
