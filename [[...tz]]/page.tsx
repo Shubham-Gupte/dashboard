@@ -567,6 +567,11 @@ export default function DashboardPage() {
   const { data: weather, error: weatherErr } = useSWR(weatherUrl, fetcher, swr(600_000));
   const transitUrl = geo ? `/dashboard/api/transit?lat=${geo.lat}&lon=${geo.lon}` : "/dashboard/api/transit";
   const { data: subway, error: subwayErr } = useSWR(transitUrl, fetcher, swr(30_000));
+  const lastGoodSubway = useRef<typeof subway>(null);
+  useEffect(() => {
+    if (subway?.arrivals?.length > 0) lastGoodSubway.current = subway;
+  }, [subway]);
+  const displaySubway = (subway?.arrivals?.length === 0 && lastGoodSubway.current) ? lastGoodSubway.current : subway;
   const { data: calendar, error: calendarErr } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
   const { data: weekCal } = useSWR("/dashboard/api/calendar?days=7", fetcher, swr(1800_000));
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
@@ -1001,34 +1006,34 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Transit</h2>
-              {subway?.lines?.map((l: string) => (
-                <TransitIcon key={l} line={l} size={16} lineStyles={subway.lineStyles} />
+              {displaySubway?.lines?.map((l: string) => (
+                <TransitIcon key={l} line={l} size={16} lineStyles={displaySubway.lineStyles} />
               ))}
             </div>
             <div className="flex items-baseline gap-2">
-              {subway?.station && <span className="text-[10px] text-[#AE6455] font-mono">{subway.station}</span>}
+              {displaySubway?.station && <span className="text-[10px] text-[#AE6455] font-mono">{displaySubway.station}</span>}
               <span className="text-xs text-[#AE6455]">{timeAgo(subway?.updatedAt)}</span>
             </div>
           </div>
-          {subwayErr && !subway ? (
+          {subwayErr && !displaySubway ? (
             <StaleData label="Transit" />
-          ) : subway ? (
-            <>
-              {subway.arrivals?.length > 0 ? (
+          ) : displaySubway ? (
+            <div className="overflow-y-auto flex-1 min-h-0 space-y-px">
+              {displaySubway.arrivals?.length > 0 ? (
                 <>
                   {/* Uptown / Downtown */}
-                  {(subway.directions as string[])?.length > 0 && (
+                  {(displaySubway.directions as string[])?.length > 0 && (
                     <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
-                      {(subway.directions as string[]).map((dir: string, di: number) => {
-                        const ctSet = new Set(subway.crosstownLines ?? []);
-                        const trains = subway.arrivals.filter((a: { line: string; direction: string }) => a.direction === dir && !ctSet.has(a.line));
+                      {(displaySubway.directions as string[]).map((dir: string, di: number) => {
+                        const ctSet = new Set(displaySubway.crosstownLines ?? []);
+                        const trains = displaySubway.arrivals.filter((a: { line: string; direction: string }) => a.direction === dir && !ctSet.has(a.line));
                         return (
                           <div key={dir} className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
                             <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">{di === 0 ? "↑" : "↓"} {dir}</div>
                             <div className="space-y-2 pb-3">
                               {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
                                 <div key={i} className="flex items-center justify-between">
-                                  <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
+                                  <TransitIcon line={a.line} size={18} lineStyles={displaySubway.lineStyles} />
                                   <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
                                     {a.minutes === 0 ? "NOW" : a.minutes}
                                   </span>
@@ -1043,11 +1048,11 @@ export default function DashboardPage() {
                     </div>
                   )}
                   {/* Crosstown */}
-                  {(subway.crosstownLines as string[])?.length > 0 && (() => {
-                    const ctSet = new Set(subway.crosstownLines as string[]);
-                    const ctTrains = subway.arrivals.filter((a: { line: string }) => ctSet.has(a.line));
+                  {(displaySubway.crosstownLines as string[])?.length > 0 && (() => {
+                    const ctSet = new Set(displaySubway.crosstownLines as string[]);
+                    const ctTrains = displaySubway.arrivals.filter((a: { line: string }) => ctSet.has(a.line));
                     if (ctTrains.length === 0) return null;
-                    const ctDirs = (subway.crosstownDirections as string[]) ?? [];
+                    const ctDirs = (displaySubway.crosstownDirections as string[]) ?? [];
                     return (
                       <div className={`grid gap-px rounded-lg overflow-hidden ${ctDirs.length >= 2 ? "grid-cols-2" : "grid-cols-1"} mt-px`} style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.15), rgba(174,100,85,0.06))" }}>
                         {ctDirs.map((dir: string) => {
@@ -1055,10 +1060,10 @@ export default function DashboardPage() {
                           return (
                             <div key={dir} className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
                               <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#AE645588] mb-3">→ {dir}</div>
-                              <div className="space-y-2">
+                              <div className="space-y-2 pb-3">
                                 {trains.length > 0 ? trains.map((a: { line: string; minutes: number }, i: number) => (
                                   <div key={i} className="flex items-center justify-between">
-                                    <TransitIcon line={a.line} size={18} lineStyles={subway.lineStyles} />
+                                    <TransitIcon line={a.line} size={18} lineStyles={displaySubway.lineStyles} />
                                     <span className={`font-mono text-sm ${a.minutes === 0 ? "text-[#F4C9AC] font-bold glow-pulse rounded px-1.5 py-0.5" : "text-[#EF9870]"}`}>
                                       {a.minutes === 0 ? "NOW" : a.minutes}
                                     </span>
@@ -1075,17 +1080,17 @@ export default function DashboardPage() {
                   })()}
                 </>
               ) : (
-                <p className="text-xs text-[#AE6455] font-mono">{subway.message ?? "No arrivals"}</p>
+                <p className="text-xs text-[#AE6455] font-mono">{displaySubway.message ?? "No arrivals"}</p>
               )}
-              {subway.alerts?.length > 0 && (
+              {displaySubway.alerts?.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-[#AE645533] space-y-2">
-                  {subway.alerts.map((a: { lines: string[]; header: string; description: string }, i: number) => (
+                  {displaySubway.alerts.map((a: { lines: string[]; header: string; description: string }, i: number) => (
                     <div key={i} className="flex gap-2 text-xs">
                       <span className="text-[#FCCC0A] flex-shrink-0">&#9888;</span>
                       <div>
                         <div className="flex items-center gap-1 mb-0.5">
                           {a.lines.map((l: string) => (
-                            <TransitIcon key={l} line={l} size={14} lineStyles={subway.lineStyles} />
+                            <TransitIcon key={l} line={l} size={14} lineStyles={displaySubway.lineStyles} />
                           ))}
                         </div>
                         <span className="text-[#EF9870]">{a.header}</span>
@@ -1107,7 +1112,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           ) : (
             <Skeleton />
           )}
