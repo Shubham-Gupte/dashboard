@@ -277,7 +277,7 @@ function computeFreeWindows(events: { start: string; end: string }[]) {
     if (windowEnd - cursor > bestMs) { bestMs = windowEnd - cursor; bestS = cursor; bestE = windowEnd; }
 
     const freeH = bestMs / 3600000;
-    const label = freeH >= 3 ? `${fmt(bestS)}–${fmt(bestE)}` : "";
+    const label = freeH >= 3 ? `${fmt(bestS)}–${fmt(bestE)} ET` : "";
     return { date, dow, isWeekend, freeH, label, windowEnd };
   });
 }
