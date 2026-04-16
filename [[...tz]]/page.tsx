@@ -761,7 +761,10 @@ export default function DashboardPage() {
         {/* ── Weather ────────────────────────────────────────────────── */}
         <section className="dash-card p-5 lg:h-full flex flex-col overflow-hidden">
           <div className="flex justify-between items-baseline mb-4">
-            <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-[#EF9870]">Weather</h2>
+              {weather?.locationName && <span className="text-[10px] font-mono text-[#AE645588]">{weather.locationName}</span>}
+            </div>
             <span className="text-xs text-[#AE6455]">{timeAgo(weather?.updatedAt)}</span>
           </div>
           {weatherErr && !weather ? (

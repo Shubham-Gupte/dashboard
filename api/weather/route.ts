@@ -57,6 +57,23 @@ const WMO_CODES: Record<number, string> = {
 };
 
 let geoCache: { lat: number; lon: number } | null = null;
+let locationNameCache: string | null = null;
+
+async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  if (locationNameCache) return locationNameCache;
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+    const name = data.locality || data.city || data.principalSubdivision || "";
+    locationNameCache = name;
+    return name;
+  } catch {
+    return "";
+  }
+}
 
 async function geocode(address: string): Promise<{ lat: number; lon: number }> {
   if (geoCache) return geoCache;
@@ -156,7 +173,10 @@ export async function GET(request: Request) {
       }
     }
 
+    const locationName = await reverseGeocode(lat, lon);
+
     return NextResponse.json({
+      locationName,
       current: {
         temp: Math.round(data.current.temperature_2m),
         feelsLike: Math.round(data.current.apparent_temperature),
