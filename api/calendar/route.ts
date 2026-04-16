@@ -10,7 +10,7 @@ interface CalendarEvent {
   location?: string;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const calendarIds = (process.env.GOOGLE_CALENDAR_ID ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   const keyFile = process.env.GCS_KEY_FILE;
@@ -67,7 +67,8 @@ export async function GET() {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error("Failed to get access token");
 
-    // Compute today's time bounds in Eastern time
+    // Compute time bounds in Eastern time
+    const days = Math.min(14, Math.max(1, parseInt(new URL(request.url).searchParams.get("days") ?? "1")));
     const tz = "America/New_York";
     const nowET = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
     const etNow = new Date();
@@ -79,7 +80,8 @@ export async function GET() {
     const sign = offsetMs >= 0 ? "-" : "+";
     const tzOffset = `${sign}${String(offsetH).padStart(2, "0")}:${String(offsetM).padStart(2, "0")}`;
     const todayStart = `${nowET}T00:00:00${tzOffset}`;
-    const todayEnd = `${nowET}T23:59:59${tzOffset}`;
+    const rangeEndDate = new Date(Date.now() + (days - 1) * 86400000).toLocaleDateString("en-CA", { timeZone: tz });
+    const todayEnd = `${rangeEndDate}T23:59:59${tzOffset}`;
 
     // Fetch events from all calendars in parallel
     const allEvents = await Promise.all(

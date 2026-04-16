@@ -244,6 +244,44 @@ function WeatherIcon({ code, size = 24 }: { code?: number; size?: number }) {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const TZ = "America/New_York";
+
+function computeFreeWindows(events: { start: string; end: string }[]) {
+  const fmt = (ms: number) =>
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: true, timeZone: TZ })
+      .format(new Date(ms)).replace(":00", "").toLowerCase();
+
+  return Array.from({ length: 7 }, (_, d) => {
+    const dayMs = Date.now() + d * 86400000;
+    const date = new Date(dayMs).toLocaleDateString("en-CA", { timeZone: TZ });
+    const dow = new Date(dayMs).toLocaleDateString("en-US", { weekday: "short", timeZone: TZ });
+    const isWeekend = dow === "Sat" || dow === "Sun";
+    const socialStartH = isWeekend ? 10 : 18;
+
+    const windowStart = new Date(`${date}T${String(socialStartH).padStart(2, "0")}:00:00`).getTime();
+    const windowEnd = new Date(`${date}T22:00:00`).getTime();
+
+    const busy = events
+      .filter(e => e.start.includes("T"))
+      .map(e => ({ s: new Date(e.start).getTime(), e: new Date(e.end).getTime() }))
+      .filter(e => e.s < windowEnd && e.e > windowStart)
+      .map(e => ({ s: Math.max(e.s, windowStart), e: Math.min(e.e, windowEnd) }))
+      .sort((a, b) => a.s - b.s);
+
+    let cursor = windowStart;
+    let bestMs = 0, bestS = windowStart, bestE = windowEnd;
+    for (const b of busy) {
+      if (b.s > cursor && b.s - cursor > bestMs) { bestMs = b.s - cursor; bestS = cursor; bestE = b.s; }
+      cursor = Math.max(cursor, b.e);
+    }
+    if (windowEnd - cursor > bestMs) { bestMs = windowEnd - cursor; bestS = cursor; bestE = windowEnd; }
+
+    const freeH = bestMs / 3600000;
+    const label = freeH >= 3 ? `${fmt(bestS)}–${fmt(bestE)}` : "";
+    return { date, dow, isWeekend, freeH, label, windowEnd };
+  });
+}
+
 function timeAgo(iso: string | undefined): string {
   if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();
@@ -530,6 +568,7 @@ export default function DashboardPage() {
   const transitUrl = geo ? `/dashboard/api/transit?lat=${geo.lat}&lon=${geo.lon}` : "/dashboard/api/transit";
   const { data: subway, error: subwayErr } = useSWR(transitUrl, fetcher, swr(30_000));
   const { data: calendar, error: calendarErr } = useSWR("/dashboard/api/calendar", fetcher, swr(300_000));
+  const { data: weekCal } = useSWR("/dashboard/api/calendar?days=7", fetcher, swr(1800_000));
   const { data: funFact } = useSWR("/dashboard/api/fun-fact", fetcher, swr(3600_000));
   const { data: events } = useSWR("/dashboard/api/events", fetcher, swr(3600_000));
   const { data: galleries } = useSWR("/dashboard/api/galleries", fetcher, swr(86400_000));
@@ -929,6 +968,32 @@ export default function DashboardPage() {
           ) : (
             <Skeleton />
           )}
+          {mounted && weekCal?.events && (() => {
+            const windows = computeFreeWindows(weekCal.events);
+            const now = Date.now();
+            const labels = ["M", "T", "W", "T", "F", "Sa", "Su"];
+            return (
+              <div className="mt-3 pt-2.5 border-t border-[#AE645522] flex-shrink-0 flex gap-1">
+                {windows.map((w, i) => {
+                  const past = now >= w.windowEnd;
+                  const free = w.freeH >= 3 && !past;
+                  return (
+                    <div
+                      key={w.date}
+                      title={free ? `${w.label} free` : past && i === 0 ? "window passed" : "busy"}
+                      className={`flex-1 text-center text-[10px] font-mono py-0.5 rounded transition-colors ${
+                        free
+                          ? i === 0 ? "text-[#6CBE45] border border-[#6CBE4544]" : "text-[#6CBE45]"
+                          : i === 0 ? "text-[#AE6455] border border-[#AE645533]" : "text-[#AE645533]"
+                      }`}
+                    >
+                      {labels[i]}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </section>
 
         {/* ── Transit ────────────────────────────────────────────────── */}
