@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 600; // 10 min ISR
+export const dynamic = "force-dynamic";
 
 interface NotionBlock {
   id: string;
@@ -16,19 +16,29 @@ interface TodoItem {
 }
 
 async function fetchItems(pageId: string, apiKey: string): Promise<TodoItem[]> {
-  const res = await fetch(
-    `https://api.notion.com/v1/blocks/${pageId}/children?page_size=50`,
-    {
+  // Paginate through all children — checked to_do blocks are kept on the page
+  // (only filtered client-side), so a new item can sit past any single page
+  // window if the user has accumulated history.
+  const results: NotionBlock[] = [];
+  let cursor: string | undefined;
+  for (let i = 0; i < 10; i++) {
+    const url = new URL(`https://api.notion.com/v1/blocks/${pageId}/children`);
+    url.searchParams.set("page_size", "100");
+    if (cursor) url.searchParams.set("start_cursor", cursor);
+    const res = await fetch(url.toString(), {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Notion-Version": "2022-06-28",
       },
-      next: { revalidate: 60 },
-    }
-  );
-  if (!res.ok) return [];
-  const data: { results: NotionBlock[] } = await res.json();
-  return data.results
+      cache: "no-store",
+    });
+    if (!res.ok) break;
+    const data: { results: NotionBlock[]; has_more: boolean; next_cursor: string | null } = await res.json();
+    results.push(...data.results);
+    if (!data.has_more || !data.next_cursor) break;
+    cursor = data.next_cursor;
+  }
+  return results
     .map((b): TodoItem | null => {
       if (b.type === "bulleted_list_item") {
         const text = b.bulleted_list_item?.rich_text.map((r) => r.plain_text).join("") ?? "";

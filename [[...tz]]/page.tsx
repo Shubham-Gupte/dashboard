@@ -385,15 +385,15 @@ function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismisse
   onAdd: (list: "personal" | "work") => void;
 }) {
   return (
-    <div className="p-3" style={{ background: "var(--c-bg-inner-2)" }}>
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2">{label}</div>
+    <div className="p-3 flex flex-col min-h-0" style={{ background: "var(--c-bg-inner-2)" }}>
+      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#AE6455] mb-2 flex-shrink-0">{label}</div>
       {goalStart > 0 && (
-        <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3">
+        <div className="h-1 bg-[#1A1210] rounded-full overflow-hidden mb-3 flex-shrink-0">
           <div className={`h-full rounded-full transition-all duration-700 ease-out ${goalDone >= goalStart ? "progress-glow-done" : "progress-glow"}`}
             style={{ width: `${Math.min(100, (goalDone / goalStart) * 100)}%` }} />
         </div>
       )}
-      <ul>
+      <ul className="flex-1 min-h-0 overflow-y-auto">
         {items?.filter((t) => !dismissed.has(t.id)).map((t) => (
           <li key={t.id} className={`overflow-hidden transition-all duration-400 ease-in-out ${completing.has(t.id) ? "max-h-0 opacity-0 mb-0" : "max-h-40 opacity-100 mb-2.5"}`}>
             <div className={`text-xs text-[#F4C9AC] flex items-start gap-2 leading-relaxed transition-all duration-300 ${completing.has(t.id) ? "line-through translate-x-2" : ""}`}>
@@ -424,11 +424,11 @@ function TodoColumn({ label, list, items, pending, goalStart, goalDone, dismisse
           onChange={(e) => onSetText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onAdd(list); if (e.key === "Escape") { onSetAdding(null); onSetText(""); } }}
           onBlur={() => setTimeout(() => { onSetAdding(null); onSetText(""); }, 150)}
-          className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566]"
+          className="w-full text-xs bg-transparent border-b border-[#AE645544] text-[#F4C9AC] outline-none mt-1 pb-1 placeholder-[#AE645566] flex-shrink-0"
           placeholder="Add todo..."
         />
       ) : (
-        <button onClick={() => onSetAdding(list)} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1">+ add</button>
+        <button onClick={() => onSetAdding(list)} className="text-[10px] text-[#AE6455] hover:text-[#EF9870] transition-colors mt-1 flex-shrink-0 self-start">+ add</button>
       )}
     </div>
   );
@@ -1119,8 +1119,8 @@ export default function DashboardPage() {
           {todosErr && !todos ? (
             <StaleData label="To-Do" />
           ) : todos ? (
-            <div className="lg:flex-1 lg:min-h-0 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
+            <div className="flex-1 min-h-0">
+            <div className="grid grid-cols-2 gap-px rounded-lg overflow-hidden h-full" style={{ background: "linear-gradient(180deg, rgba(174,100,85,0.12), rgba(174,100,85,0.06))" }}>
               {(["personal", "work"] as const).map((list) => (
                 <TodoColumn
                   key={list}

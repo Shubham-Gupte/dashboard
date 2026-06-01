@@ -57,10 +57,13 @@ const WMO_CODES: Record<number, string> = {
 };
 
 let geoCache: { lat: number; lon: number } | null = null;
-let locationNameCache: string | null = null;
+const locationNameCache = new Map<string, string>();
 
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
-  if (locationNameCache) return locationNameCache;
+  // Key by ~1km grid so small GPS jitter still hits cache but real moves don't
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const cached = locationNameCache.get(key);
+  if (cached !== undefined) return cached;
   try {
     const res = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
@@ -68,7 +71,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
     );
     const data = await res.json();
     const name = data.locality || data.city || data.principalSubdivision || "";
-    locationNameCache = name;
+    locationNameCache.set(key, name);
     return name;
   } catch {
     return "";
